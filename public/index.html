@@ -3,11 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>WorkoutLog</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f1115;
+            color: #ffffff;
+        }
+
+        header {
+            padding: 24px;
+            border-bottom: 1px solid #2a2d35;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header p {
+            color: #9ca3af;
+        }
+
+        main {
+            max-width: 900px;
+            margin: auto;
+            padding: 24px;
+        }
+
+        .status {
+            color: #9ca3af;
+            margin-bottom: 20px;
+        }
+
+        .session {
+            background: #191c22;
+            border: 1px solid #2a2d35;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .session h2 {
+            margin-top: 0;
+        }
+
+        .meta {
+            color: #9ca3af;
+            margin-bottom: 15px;
+        }
+
+        .exercise {
+            background: #22262e;
+            padding: 14px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .exercise strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 
 <body>
+
+<header>
     <h1>WorkoutLog</h1>
-    <p>Servidor funcionando correctamente.</p>
+    <p>Historial de entrenamiento</p>
+</header>
+
+<main>
+
+    <div id="status" class="status">
+        Cargando entrenamientos...
+    </div>
+
+    <div id="sessions"></div>
+
+</main>
+
+<script>
+
+async function cargarEntrenamientos() {
+
+    const status = document.getElementById("status");
+    const container = document.getElementById("sessions");
+
+    try {
+
+        const response = await fetch("/api/sessions");
+
+        if (!response.ok) {
+            throw new Error("Error del servidor");
+        }
+
+        const sessions = await response.json();
+
+        status.textContent =
+            sessions.length + " entrenamiento(s) registrado(s)";
+
+        container.innerHTML = "";
+
+        sessions.forEach(session => {
+
+            const card = document.createElement("div");
+            card.className = "session";
+
+            const fecha =
+                new Date(session.startedAt).toLocaleString();
+
+            let exercisesHTML = "";
+
+            session.exercises.forEach(exercise => {
+
+                exercisesHTML += `
+                    <div class="exercise">
+                        <strong>${exercise.name}</strong>
+
+                        ${exercise.sets} series ×
+                        ${exercise.reps} repeticiones
+
+                        · ${exercise.weightKg} kg
+                    </div>
+                `;
+
+            });
+
+            card.innerHTML = `
+                <h2>${session.activity}</h2>
+
+                <div class="meta">
+                    ${fecha}
+                    · ${session.intensity}
+                    · ${session.totalDurationMinutes} min
+                </div>
+
+                ${exercisesHTML}
+            `;
+
+            container.appendChild(card);
+
+        });
+
+    } catch(error) {
+
+        status.textContent =
+            "No se pudieron cargar los entrenamientos.";
+
+        console.error(error);
+
+    }
+
+}
+
+cargarEntrenamientos();
+
+</script>
+
 </body>
 </html>

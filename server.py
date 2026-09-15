@@ -148,7 +148,12 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/stats":
             return self.get_stats()
 
+        if path == "/":
+            self.path = "/index.html"
+            return super().do_GET()
+
         return super().do_GET()
+
 
 
     # ======================================
