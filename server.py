@@ -3,6 +3,8 @@ from urllib.parse import urlparse
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 import sqlite3
+import psycopg
+from psycopg.rows import dict_row
 import json
 import uuid
 import os
@@ -15,6 +17,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
 DB_PATH = BASE_DIR / "data" / "workoutlog.sqlite3"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 PORT = int(os.environ.get("PORT", "3000"))
 
@@ -26,6 +29,14 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # ==========================================
 
 def connect():
+    if DATABASE_URL:
+        return psycopg.connect(
+            DATABASE_URL,
+            row_factory=dict_row
+        )
+
+    # Si ejecutamos WorkoutLog localmente sin DATABASE_URL,
+    # seguimos usando SQLite.
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
@@ -35,34 +46,65 @@ def connect():
 def init_db():
     con = connect()
 
-    con.executescript("""
-    CREATE TABLE IF NOT EXISTS sessions (
-        id TEXT PRIMARY KEY,
-        activity TEXT NOT NULL,
-        started_at TEXT NOT NULL,
-        total_duration_minutes INTEGER NOT NULL DEFAULT 0,
-        intensity TEXT NOT NULL DEFAULT 'Moderada',
-        notes TEXT NOT NULL DEFAULT ''
-    );
+    if DATABASE_URL:
+        # PostgreSQL en Render
+        with con.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id TEXT PRIMARY KEY,
+                    activity TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    total_duration_minutes INTEGER NOT NULL DEFAULT 0,
+                    intensity TEXT NOT NULL DEFAULT 'Moderada',
+                    notes TEXT NOT NULL DEFAULT ''
+                )
+            """)
 
-    CREATE TABLE IF NOT EXISTS exercises (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        sets INTEGER NOT NULL DEFAULT 0,
-        reps INTEGER NOT NULL DEFAULT 0,
-        weight_kg REAL NOT NULL DEFAULT 0,
-        duration_minutes INTEGER NOT NULL DEFAULT 0,
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS exercises (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    sets INTEGER NOT NULL DEFAULT 0,
+                    reps INTEGER NOT NULL DEFAULT 0,
+                    weight_kg REAL NOT NULL DEFAULT 0,
+                    duration_minutes INTEGER NOT NULL DEFAULT 0,
 
-        FOREIGN KEY(session_id)
-        REFERENCES sessions(id)
-        ON DELETE CASCADE
-    );
-    """)
+                    FOREIGN KEY (session_id)
+                    REFERENCES sessions(id)
+                    ON DELETE CASCADE
+                )
+            """)
+
+    else:
+        # SQLite cuando trabajamos localmente
+        con.executescript("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                activity TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                total_duration_minutes INTEGER NOT NULL DEFAULT 0,
+                intensity TEXT NOT NULL DEFAULT 'Moderada',
+                notes TEXT NOT NULL DEFAULT ''
+            );
+
+            CREATE TABLE IF NOT EXISTS exercises (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                sets INTEGER NOT NULL DEFAULT 0,
+                reps INTEGER NOT NULL DEFAULT 0,
+                weight_kg REAL NOT NULL DEFAULT 0,
+                duration_minutes INTEGER NOT NULL DEFAULT 0,
+
+                FOREIGN KEY (session_id)
+                REFERENCES sessions(id)
+                ON DELETE CASCADE
+            );
+        """)
 
     con.commit()
     con.close()
-
 
 # ==========================================
 # CONVERTIR SESIÓN A JSON
