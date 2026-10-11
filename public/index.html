@@ -70,6 +70,18 @@
             display: block;
             margin-bottom: 5px;
         }
+
+        #filter {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    border: 1px solid #2a2d35;
+    background: #191c22;
+    color: white;
+    font-size: 16px;
+}
+        
     </style>
 </head>
 
@@ -85,7 +97,11 @@
     <div id="status" class="status">
         Cargando entrenamientos...
     </div>
-
+    
+<select id="filter">
+    <option value="Todos">Todos</option>
+</select>
+    
     <div id="sessions"></div>
 
 </main>
@@ -107,50 +123,83 @@ async function cargarEntrenamientos() {
 
         const sessions = await response.json();
 
-        status.textContent =
-            sessions.length + " entrenamiento(s) registrado(s)";
+const filter = document.getElementById("filter");
 
-        container.innerHTML = "";
+// Crear automáticamente las opciones del filtro
+const grupos = [...new Set(
+    sessions
+        .map(session => session.activity)
+        .filter(Boolean)
+)];
 
-        sessions.forEach(session => {
+grupos.forEach(grupo => {
+    const option = document.createElement("option");
+    option.value = grupo;
+    option.textContent = grupo;
+    filter.appendChild(option);
+});
 
-            const card = document.createElement("div");
-            card.className = "session";
+function mostrarSesiones(filtroSeleccionado) {
 
-            const fecha =
-                new Date(session.startedAt).toLocaleString();
+    container.innerHTML = "";
 
-            let exercisesHTML = "";
+    const sesionesFiltradas =
+        filtroSeleccionado === "Todos"
+            ? sessions
+            : sessions.filter(
+                session => session.activity === filtroSeleccionado
+            );
 
-            session.exercises.forEach(exercise => {
+    status.textContent =
+        sesionesFiltradas.length +
+        " entrenamiento(s) registrado(s)";
 
-                exercisesHTML += `
-                    <div class="exercise">
-                        <strong>${exercise.name}</strong>
+    sesionesFiltradas.forEach(session => {
 
-                        ${exercise.sets} series ×
-                        ${exercise.reps} repeticiones
+        const card = document.createElement("div");
+        card.className = "session";
 
-                        · ${exercise.weightKg} kg
-                    </div>
-                `;
+        const fecha =
+            new Date(session.startedAt).toLocaleString();
 
-            });
+        let exercisesHTML = "";
 
-            card.innerHTML = `
-                <h2>${session.activity}</h2>
+        session.exercises.forEach(exercise => {
 
-                <div class="meta">
-                    ${fecha}
-                    · ${session.intensity}
+            exercisesHTML += `
+                <div class="exercise">
+                    <strong>${exercise.name}</strong>
+
+                    ${exercise.sets} series ×
+                    ${exercise.reps} repeticiones
+
+                    · ${exercise.weightKg} kg
                 </div>
-
-                ${exercisesHTML}
             `;
 
-            container.appendChild(card);
-
         });
+
+        card.innerHTML = `
+            <h2>${session.activity}</h2>
+
+            <div class="meta">
+                ${fecha}
+                · ${session.intensity}
+            </div>
+
+            ${exercisesHTML}
+        `;
+
+        container.appendChild(card);
+
+    });
+}
+
+filter.addEventListener("change", () => {
+    mostrarSesiones(filter.value);
+});
+
+mostrarSesiones("Todos");
 
     } catch(error) {
 
