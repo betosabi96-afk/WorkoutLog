@@ -43,6 +43,13 @@ def connect():
     return con
 
 
+def sql_query(query):
+    """Use the correct parameter placeholder for the active database."""
+    if DATABASE_URL:
+        return query.replace("?", "%s")
+    return query
+
+
 def init_db():
     con = connect()
 
@@ -239,12 +246,11 @@ class Handler(SimpleHTTPRequestHandler):
         for session in sessions:
 
             exercises = con.execute(
-                """
+                sql_query("""
                 SELECT *
                 FROM exercises
                 WHERE session_id = ?
-                ORDER BY rowid
-                """,
+                """),
                 (session["id"],)
             ).fetchall()
 
@@ -541,7 +547,7 @@ class Handler(SimpleHTTPRequestHandler):
         try:
 
             con.execute(
-                """
+                sql_query("""
                 INSERT INTO sessions
                 (
                     id,
@@ -552,7 +558,7 @@ class Handler(SimpleHTTPRequestHandler):
                     notes
                 )
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                """),
                 (
                     session_id,
                     activity,
@@ -651,7 +657,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
                 con.execute(
-                    """
+                    sql_query("""
                     INSERT INTO exercises
                     (
                         id,
@@ -663,7 +669,7 @@ class Handler(SimpleHTTPRequestHandler):
                         duration_minutes
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    """),
                     (
                         str(uuid.uuid4()),
                         session_id,
@@ -700,22 +706,21 @@ class Handler(SimpleHTTPRequestHandler):
 
 
             session = con.execute(
-                """
+                sql_query("""
                 SELECT *
                 FROM sessions
                 WHERE id = ?
-                """,
+                """),
                 (session_id,)
             ).fetchone()
 
 
             exercise_rows = con.execute(
-                """
+                sql_query("""
                 SELECT *
                 FROM exercises
                 WHERE session_id = ?
-                ORDER BY rowid
-                """,
+                """),
                 (session_id,)
             ).fetchall()
 
