@@ -7,6 +7,32 @@
     <title>WorkoutLog</title>
 
     <style>
+        #progress {
+    background: #191c22;
+    border: 1px solid #2a2d35;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+#progress h2 {
+    margin-top: 0;
+}
+
+#exerciseFilter {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #2a2d35;
+    background: #22262e;
+    color: white;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+#progressResult {
+    color: #9ca3af;
+}
         * {
             box-sizing: border-box;
         }
@@ -134,6 +160,8 @@ async function cargarEntrenamientos() {
         const sessions = await response.json();
 
 const filter = document.getElementById("filter");
+const exerciseFilter = document.getElementById("exerciseFilter");
+const progressResult = document.getElementById("progressResult");
 
 // Crear automáticamente las opciones del filtro
 const grupos = [...new Set(
@@ -148,7 +176,61 @@ grupos.forEach(grupo => {
     option.textContent = grupo;
     filter.appendChild(option);
 });
+        const ejercicios = [...new Set(
+    sessions.flatMap(session =>
+        session.exercises.map(exercise => exercise.name)
+    )
+)];
 
+ejercicios.forEach(ejercicio => {
+    const option = document.createElement("option");
+    option.value = ejercicio;
+    option.textContent = ejercicio;
+    exerciseFilter.appendChild(option);
+});
+function mostrarProgreso(nombreEjercicio) {
+
+    if (!nombreEjercicio) {
+        progressResult.innerHTML = "";
+        return;
+    }
+
+    const historial = [];
+
+    sessions.forEach(session => {
+
+        session.exercises.forEach(exercise => {
+
+            if (exercise.name === nombreEjercicio) {
+
+                historial.push({
+                    fecha: new Date(session.startedAt),
+                    sets: exercise.sets,
+                    reps: exercise.reps,
+                    weightKg: exercise.weightKg
+                });
+
+            }
+
+        });
+
+    });
+
+    historial.sort((a, b) => a.fecha - b.fecha);
+
+    progressResult.innerHTML = historial.map(registro => `
+        <div class="exercise">
+            <strong>${registro.fecha.toLocaleDateString()}</strong>
+            ${registro.sets} series ×
+            ${registro.reps} repeticiones
+            · ${registro.weightKg} kg
+        </div>
+    `).join("");
+}
+
+exerciseFilter.addEventListener("change", () => {
+    mostrarProgreso(exerciseFilter.value);
+});
 function mostrarSesiones(filtroSeleccionado) {
 
     container.innerHTML = "";
