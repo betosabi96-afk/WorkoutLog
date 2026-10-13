@@ -90,6 +90,33 @@
             color: #ffffff;
         }
 
+
+        .progress-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .summary-card {
+            background: #11141a;
+            border: 1px solid #2a2d35;
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .summary-label {
+            display: block;
+            color: #9ca3af;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .summary-value {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
         .chart-wrap {
             background: #11141a;
             border: 1px solid #2a2d35;
@@ -214,6 +241,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .progress-summary {
+                grid-template-columns: 1fr;
+            }
+
             .calendar-weekdays,
             .calendar-grid {
                 gap: 4px;
@@ -263,6 +294,23 @@
 
         <div id="progressResult"></div>
 
+        <div id="progressSummary" class="progress-summary">
+            <div class="summary-card">
+                <span class="summary-label">Valor actual</span>
+                <span id="summaryCurrent" class="summary-value">—</span>
+            </div>
+
+            <div class="summary-card">
+                <span class="summary-label">Mejor marca</span>
+                <span id="summaryBest" class="summary-value">—</span>
+            </div>
+
+            <div class="summary-card">
+                <span class="summary-label">Cambio vs. anterior</span>
+                <span id="summaryChange" class="summary-value">—</span>
+            </div>
+        </div>
+
         <div class="chart-wrap">
             <div id="progressChart">
                 <div class="chart-empty">Selecciona un ejercicio para ver su gráfica.</div>
@@ -304,6 +352,9 @@ async function cargarEntrenamientos() {
     const metricFilter = document.getElementById("metricFilter");
     const progressResult = document.getElementById("progressResult");
     const progressChart = document.getElementById("progressChart");
+    const summaryCurrent = document.getElementById("summaryCurrent");
+    const summaryBest = document.getElementById("summaryBest");
+    const summaryChange = document.getElementById("summaryChange");
     const calendarGrid = document.getElementById("calendarGrid");
     const calendarTitle = document.getElementById("calendarTitle");
     const calendarDetails = document.getElementById("calendarDetails");
@@ -368,6 +419,9 @@ async function cargarEntrenamientos() {
         function mostrarProgreso(nombreEjercicio) {
             if (!nombreEjercicio) {
                 progressResult.innerHTML = "";
+                summaryCurrent.textContent = "—";
+                summaryBest.textContent = "—";
+                summaryChange.textContent = "—";
                 progressChart.innerHTML =
                     '<div class="chart-empty">Selecciona un ejercicio para ver su gráfica.</div>';
                 return;
@@ -384,7 +438,40 @@ async function cargarEntrenamientos() {
                 </div>
             `).join("");
 
+            actualizarResumen(historial, metricFilter.value);
             mostrarGrafica(historial, metricFilter.value);
+        }
+
+        function actualizarResumen(historial, metrica) {
+            if (!historial.length) {
+                summaryCurrent.textContent = "—";
+                summaryBest.textContent = "—";
+                summaryChange.textContent = "—";
+                return;
+            }
+
+            const unidades = {
+                weightKg: " kg",
+                reps: " reps",
+                sets: " series"
+            };
+
+            const valores = historial.map(item => Number(item[metrica]) || 0);
+            const actual = valores[valores.length - 1];
+            const mejor = Math.max(...valores);
+
+            summaryCurrent.textContent = actual + unidades[metrica];
+            summaryBest.textContent = mejor + unidades[metrica];
+
+            if (valores.length < 2) {
+                summaryChange.textContent = "—";
+            } else {
+                const anterior = valores[valores.length - 2];
+                const cambio = actual - anterior;
+                const signo = cambio > 0 ? "+" : "";
+                summaryChange.textContent =
+                    signo + cambio + unidades[metrica];
+            }
         }
 
         function mostrarGrafica(historial, metrica) {
@@ -477,7 +564,7 @@ async function cargarEntrenamientos() {
                 card.className = "session";
 
                 const fecha =
-                    new Date(session.startedAt).toLocaleString("es-MX");
+                    new Date(session.startedAt).toLocaleDateString("es-MX");
 
                 let exercisesHTML = "";
 
