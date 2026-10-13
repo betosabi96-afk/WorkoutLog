@@ -3,39 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>WorkoutLog</title>
 
     <style>
-        #progress {
-    background: #191c22;
-    border: 1px solid #2a2d35;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-#progress h2 {
-    margin-top: 0;
-}
-
-#exerciseFilter {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #2a2d35;
-    background: #22262e;
-    color: white;
-    font-size: 16px;
-    margin-bottom: 15px;
-}
-
-#progressResult {
-    color: #9ca3af;
-}
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -49,16 +20,11 @@
             border-bottom: 1px solid #2a2d35;
         }
 
-        header h1 {
-            margin: 0;
-        }
-
-        header p {
-            color: #9ca3af;
-        }
+        header h1 { margin: 0; }
+        header p { color: #9ca3af; }
 
         main {
-            max-width: 900px;
+            max-width: 1050px;
             margin: auto;
             padding: 24px;
         }
@@ -68,23 +34,48 @@
             margin-bottom: 20px;
         }
 
+        .panel,
         .session {
             background: #191c22;
             border: 1px solid #2a2d35;
             border-radius: 16px;
             padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel h2,
+        .session h2 { margin-top: 0; }
+
+        #filter,
+        #exerciseFilter,
+        #metricFilter {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #2a2d35;
+            background: #22262e;
+            color: white;
+            font-size: 16px;
+        }
+
+        #filter {
+            margin-bottom: 20px;
+            background: #191c22;
+        }
+
+        .progress-controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 12px;
             margin-bottom: 16px;
         }
 
-        .session h2 {
-            margin-top: 0;
-        }
-
-        .meta {
+        #progressResult {
             color: #9ca3af;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
 
+        .progress-entry,
         .exercise {
             background: #22262e;
             padding: 14px;
@@ -92,22 +83,149 @@
             margin-top: 10px;
         }
 
+        .progress-entry strong,
         .exercise strong {
             display: block;
             margin-bottom: 5px;
+            color: #ffffff;
         }
 
-        #filter {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 20px;
-    border-radius: 10px;
-    border: 1px solid #2a2d35;
-    background: #191c22;
-    color: white;
-    font-size: 16px;
-}
-        
+        .chart-wrap {
+            background: #11141a;
+            border: 1px solid #2a2d35;
+            border-radius: 12px;
+            padding: 12px;
+            overflow-x: auto;
+        }
+
+        #progressChart {
+            width: 100%;
+            min-height: 260px;
+        }
+
+        #progressChart svg {
+            width: 100%;
+            height: 260px;
+            display: block;
+        }
+
+        .chart-empty {
+            color: #9ca3af;
+            padding: 24px 8px;
+            text-align: center;
+        }
+
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .calendar-header h2 {
+            margin: 0;
+            text-align: center;
+            flex: 1;
+        }
+
+        .calendar-nav {
+            border: 1px solid #2a2d35;
+            background: #22262e;
+            color: white;
+            border-radius: 10px;
+            min-width: 44px;
+            min-height: 44px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .calendar-weekdays,
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .calendar-weekdays {
+            margin-bottom: 8px;
+            color: #9ca3af;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .calendar-day {
+            min-height: 88px;
+            border: 1px solid #2a2d35;
+            border-radius: 10px;
+            background: #11141a;
+            color: #ffffff;
+            padding: 8px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .calendar-day.empty {
+            opacity: 0.25;
+            cursor: default;
+        }
+
+        .calendar-day.has-workout {
+            background: #22262e;
+        }
+
+        .calendar-day.selected {
+            outline: 2px solid #9ca3af;
+        }
+
+        .day-number { font-weight: bold; }
+
+        .workout-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ffffff;
+            margin-top: 8px;
+        }
+
+        .workout-count {
+            display: block;
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        #calendarDetails { margin-top: 18px; }
+
+        .calendar-detail-title {
+            margin: 0 0 12px;
+        }
+
+        .meta {
+            color: #9ca3af;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 700px) {
+            main { padding: 16px; }
+
+            .progress-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-weekdays,
+            .calendar-grid {
+                gap: 4px;
+            }
+
+            .calendar-day {
+                min-height: 70px;
+                padding: 6px;
+            }
+
+            .workout-count { display: none; }
+        }
     </style>
 </head>
 
@@ -123,34 +241,76 @@
     <div id="status" class="status">
         Cargando entrenamientos...
     </div>
-    
-<select id="filter">
-    <option value="Todos">Todos</option>
-</select>
 
-<section id="progress">
-    <h2>Progreso por ejercicio</h2>
-
-    <select id="exerciseFilter">
-        <option value="">Selecciona un ejercicio</option>
+    <select id="filter">
+        <option value="Todos">Todos</option>
     </select>
 
-    <div id="progressResult"></div>
-</section>
+    <section id="progress" class="panel">
+        <h2>Progreso por ejercicio</h2>
 
-<div id="sessions"></div>
+        <div class="progress-controls">
+            <select id="exerciseFilter">
+                <option value="">Selecciona un ejercicio</option>
+            </select>
+
+            <select id="metricFilter">
+                <option value="weightKg">Peso</option>
+                <option value="reps">Repeticiones</option>
+                <option value="sets">Series</option>
+            </select>
+        </div>
+
+        <div id="progressResult"></div>
+
+        <div class="chart-wrap">
+            <div id="progressChart">
+                <div class="chart-empty">Selecciona un ejercicio para ver su gráfica.</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="calendarSection" class="panel">
+        <div class="calendar-header">
+            <button id="prevMonth" class="calendar-nav" type="button" aria-label="Mes anterior">‹</button>
+            <h2 id="calendarTitle">Calendario</h2>
+            <button id="nextMonth" class="calendar-nav" type="button" aria-label="Mes siguiente">›</button>
+        </div>
+
+        <div class="calendar-weekdays" aria-hidden="true">
+            <div>Dom</div>
+            <div>Lun</div>
+            <div>Mar</div>
+            <div>Mié</div>
+            <div>Jue</div>
+            <div>Vie</div>
+            <div>Sáb</div>
+        </div>
+
+        <div id="calendarGrid" class="calendar-grid"></div>
+        <div id="calendarDetails"></div>
+    </section>
+
+    <div id="sessions"></div>
 
 </main>
 
 <script>
-
 async function cargarEntrenamientos() {
-
     const status = document.getElementById("status");
     const container = document.getElementById("sessions");
+    const filter = document.getElementById("filter");
+    const exerciseFilter = document.getElementById("exerciseFilter");
+    const metricFilter = document.getElementById("metricFilter");
+    const progressResult = document.getElementById("progressResult");
+    const progressChart = document.getElementById("progressChart");
+    const calendarGrid = document.getElementById("calendarGrid");
+    const calendarTitle = document.getElementById("calendarTitle");
+    const calendarDetails = document.getElementById("calendarDetails");
+    const prevMonth = document.getElementById("prevMonth");
+    const nextMonth = document.getElementById("nextMonth");
 
     try {
-
         const response = await fetch("/api/sessions");
 
         if (!response.ok) {
@@ -159,153 +319,361 @@ async function cargarEntrenamientos() {
 
         const sessions = await response.json();
 
-const filter = document.getElementById("filter");
-const exerciseFilter = document.getElementById("exerciseFilter");
-const progressResult = document.getElementById("progressResult");
+        const grupos = [...new Set(
+            sessions.map(session => session.activity).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es"));
 
-// Crear automáticamente las opciones del filtro
-const grupos = [...new Set(
-    sessions
-        .map(session => session.activity)
-        .filter(Boolean)
-)];
+        grupos.forEach(grupo => {
+            const option = document.createElement("option");
+            option.value = grupo;
+            option.textContent = grupo;
+            filter.appendChild(option);
+        });
 
-grupos.forEach(grupo => {
-    const option = document.createElement("option");
-    option.value = grupo;
-    option.textContent = grupo;
-    filter.appendChild(option);
-});
         const ejercicios = [...new Set(
-    sessions.flatMap(session =>
-        session.exercises.map(exercise => exercise.name)
-    )
-)];
+            sessions.flatMap(session =>
+                Array.isArray(session.exercises)
+                    ? session.exercises.map(exercise => exercise.name).filter(Boolean)
+                    : []
+            )
+        )].sort((a, b) => a.localeCompare(b, "es"));
 
-ejercicios.forEach(ejercicio => {
-    const option = document.createElement("option");
-    option.value = ejercicio;
-    option.textContent = ejercicio;
-    exerciseFilter.appendChild(option);
-});
-function mostrarProgreso(nombreEjercicio) {
+        ejercicios.forEach(ejercicio => {
+            const option = document.createElement("option");
+            option.value = ejercicio;
+            option.textContent = ejercicio;
+            exerciseFilter.appendChild(option);
+        });
 
-    if (!nombreEjercicio) {
-        progressResult.innerHTML = "";
-        return;
-    }
+        function crearHistorialEjercicio(nombreEjercicio) {
+            const historial = [];
 
-    const historial = [];
-
-    sessions.forEach(session => {
-
-        session.exercises.forEach(exercise => {
-
-            if (exercise.name === nombreEjercicio) {
-
-                historial.push({
-                    fecha: new Date(session.startedAt),
-                    sets: exercise.sets,
-                    reps: exercise.reps,
-                    weightKg: exercise.weightKg
+            sessions.forEach(session => {
+                (session.exercises || []).forEach(exercise => {
+                    if (exercise.name === nombreEjercicio) {
+                        historial.push({
+                            fecha: new Date(session.startedAt),
+                            sets: Number(exercise.sets) || 0,
+                            reps: Number(exercise.reps) || 0,
+                            weightKg: Number(exercise.weightKg) || 0
+                        });
+                    }
                 });
+            });
 
+            historial.sort((a, b) => a.fecha - b.fecha);
+            return historial;
+        }
+
+        function mostrarProgreso(nombreEjercicio) {
+            if (!nombreEjercicio) {
+                progressResult.innerHTML = "";
+                progressChart.innerHTML =
+                    '<div class="chart-empty">Selecciona un ejercicio para ver su gráfica.</div>';
+                return;
             }
 
-        });
+            const historial = crearHistorialEjercicio(nombreEjercicio);
 
-    });
-
-    historial.sort((a, b) => a.fecha - b.fecha);
-
-    progressResult.innerHTML = historial.map(registro => `
-        <div class="exercise">
-            <strong>${registro.fecha.toLocaleDateString()}</strong>
-            ${registro.sets} series ×
-            ${registro.reps} repeticiones
-            · ${registro.weightKg} kg
-        </div>
-    `).join("");
-}
-
-exerciseFilter.addEventListener("change", () => {
-    mostrarProgreso(exerciseFilter.value);
-});
-function mostrarSesiones(filtroSeleccionado) {
-
-    container.innerHTML = "";
-
-    const sesionesFiltradas =
-        filtroSeleccionado === "Todos"
-            ? sessions
-            : sessions.filter(
-                session => session.activity === filtroSeleccionado
-            );
-
-    status.textContent =
-        sesionesFiltradas.length +
-        " entrenamiento(s) registrado(s)";
-
-    sesionesFiltradas.forEach(session => {
-
-        const card = document.createElement("div");
-        card.className = "session";
-
-        const fecha =
-            new Date(session.startedAt).toLocaleString();
-
-        let exercisesHTML = "";
-
-        session.exercises.forEach(exercise => {
-
-            exercisesHTML += `
-                <div class="exercise">
-                    <strong>${exercise.name}</strong>
-
-                    ${exercise.sets} series ×
-                    ${exercise.reps} repeticiones
-
-                    · ${exercise.weightKg} kg
+            progressResult.innerHTML = historial.map(registro => `
+                <div class="progress-entry">
+                    <strong>${registro.fecha.toLocaleDateString("es-MX")}</strong>
+                    ${registro.sets} series ×
+                    ${registro.reps} repeticiones
+                    · ${registro.weightKg} kg
                 </div>
-            `;
+            `).join("");
 
+            mostrarGrafica(historial, metricFilter.value);
+        }
+
+        function mostrarGrafica(historial, metrica) {
+            if (!historial.length) {
+                progressChart.innerHTML =
+                    '<div class="chart-empty">No hay datos para este ejercicio.</div>';
+                return;
+            }
+
+            const etiquetas = {
+                weightKg: "kg",
+                reps: "reps",
+                sets: "series"
+            };
+
+            const valores = historial.map(item => Number(item[metrica]) || 0);
+            const max = Math.max(...valores, 1);
+            const min = Math.min(...valores, 0);
+
+            const width = 800;
+            const height = 260;
+            const padLeft = 55;
+            const padRight = 24;
+            const padTop = 24;
+            const padBottom = 48;
+            const chartW = width - padLeft - padRight;
+            const chartH = height - padTop - padBottom;
+
+            const x = index => {
+                if (historial.length === 1) return padLeft + chartW / 2;
+                return padLeft + (index * chartW / (historial.length - 1));
+            };
+
+            const rango = Math.max(max - min, 1);
+            const y = valor =>
+                padTop + chartH - ((valor - min) / rango) * chartH;
+
+            const puntos = historial
+                .map((item, index) => `${x(index)},${y(Number(item[metrica]) || 0)}`)
+                .join(" ");
+
+            const marcas = historial.map((item, index) => {
+                const valor = Number(item[metrica]) || 0;
+                const fecha = item.fecha.toLocaleDateString("es-MX", {
+                    day: "2-digit",
+                    month: "2-digit"
+                });
+
+                return `
+                    <circle cx="${x(index)}" cy="${y(valor)}" r="5" fill="white"></circle>
+                    <text x="${x(index)}" y="${y(valor) - 10}" fill="#ffffff"
+                          text-anchor="middle" font-size="12">${valor}</text>
+                    <text x="${x(index)}" y="${height - 18}" fill="#9ca3af"
+                          text-anchor="middle" font-size="11">${fecha}</text>
+                `;
+            }).join("");
+
+            progressChart.innerHTML = `
+                <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfica de progreso">
+                    <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${height - padBottom}"
+                          stroke="#4b5563" stroke-width="1"></line>
+                    <line x1="${padLeft}" y1="${height - padBottom}" x2="${width - padRight}"
+                          y2="${height - padBottom}" stroke="#4b5563" stroke-width="1"></line>
+                    <text x="14" y="${padTop + 8}" fill="#9ca3af" font-size="12">${max} ${etiquetas[metrica]}</text>
+                    <text x="14" y="${height - padBottom}" fill="#9ca3af" font-size="12">${min} ${etiquetas[metrica]}</text>
+                    <polyline points="${puntos}" fill="none" stroke="#ffffff"
+                              stroke-width="2.5" stroke-linejoin="round"
+                              stroke-linecap="round"></polyline>
+                    ${marcas}
+                </svg>
+            `;
+        }
+
+        function mostrarSesiones(filtroSeleccionado) {
+            container.innerHTML = "";
+
+            const sesionesFiltradas =
+                filtroSeleccionado === "Todos"
+                    ? sessions
+                    : sessions.filter(
+                        session => session.activity === filtroSeleccionado
+                    );
+
+            status.textContent =
+                sesionesFiltradas.length +
+                " entrenamiento(s) registrado(s)";
+
+            sesionesFiltradas.forEach(session => {
+                const card = document.createElement("div");
+                card.className = "session";
+
+                const fecha =
+                    new Date(session.startedAt).toLocaleString("es-MX");
+
+                let exercisesHTML = "";
+
+                (session.exercises || []).forEach(exercise => {
+                    exercisesHTML += `
+                        <div class="exercise">
+                            <strong>${exercise.name}</strong>
+                            ${exercise.sets} series ×
+                            ${exercise.reps} repeticiones
+                            · ${exercise.weightKg} kg
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <h2>${session.activity}</h2>
+                    <div class="meta">
+                        ${fecha}
+                        · ${session.intensity}
+                    </div>
+                    ${exercisesHTML}
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function claveFecha(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+        }
+
+        const sesionesPorDia = new Map();
+
+        sessions.forEach(session => {
+            const fecha = new Date(session.startedAt);
+            const key = claveFecha(fecha);
+
+            if (!sesionesPorDia.has(key)) {
+                sesionesPorDia.set(key, []);
+            }
+
+            sesionesPorDia.get(key).push(session);
         });
 
-        card.innerHTML = `
-            <h2>${session.activity}</h2>
+        const fechaInicial = sessions.length
+            ? new Date(sessions[0].startedAt)
+            : new Date();
 
-            <div class="meta">
-                ${fecha}
-                · ${session.intensity}
-            </div>
+        let calendarioActual = new Date(
+            fechaInicial.getFullYear(),
+            fechaInicial.getMonth(),
+            1
+        );
 
-            ${exercisesHTML}
-        `;
+        function mostrarDetalleDia(key) {
+            const delDia = sesionesPorDia.get(key) || [];
 
-        container.appendChild(card);
+            if (!delDia.length) {
+                calendarDetails.innerHTML =
+                    '<div class="meta">No hay entrenamientos registrados en este día.</div>';
+                return;
+            }
 
-    });
-}
+            const fecha = new Date(key + "T12:00:00");
 
-filter.addEventListener("change", () => {
-    mostrarSesiones(filter.value);
-});
+            calendarDetails.innerHTML = `
+                <h3 class="calendar-detail-title">
+                    ${fecha.toLocaleDateString("es-MX", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric"
+                    })}
+                </h3>
+                ${delDia.map(session => `
+                    <div class="session">
+                        <h2>${session.activity}</h2>
+                        <div class="meta">${session.intensity}</div>
 
-mostrarSesiones("Todos");
+                        ${(session.exercises || []).map(exercise => `
+                            <div class="exercise">
+                                <strong>${exercise.name}</strong>
+                                ${exercise.sets} series ×
+                                ${exercise.reps} repeticiones
+                                · ${exercise.weightKg} kg
+                            </div>
+                        `).join("")}
+                    </div>
+                `).join("")}
+            `;
+        }
+
+        function renderCalendario() {
+            calendarGrid.innerHTML = "";
+            calendarDetails.innerHTML = "";
+
+            const year = calendarioActual.getFullYear();
+            const month = calendarioActual.getMonth();
+
+            calendarTitle.textContent =
+                calendarioActual.toLocaleDateString("es-MX", {
+                    month: "long",
+                    year: "numeric"
+                }).replace(/^./, c => c.toUpperCase());
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                const empty = document.createElement("div");
+                empty.className = "calendar-day empty";
+                calendarGrid.appendChild(empty);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const fecha = new Date(year, month, day);
+                const key = claveFecha(fecha);
+                const delDia = sesionesPorDia.get(key) || [];
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "calendar-day";
+
+                if (delDia.length) {
+                    button.classList.add("has-workout");
+                }
+
+                button.innerHTML = `
+                    <span class="day-number">${day}</span>
+                    ${delDia.length ? `
+                        <span class="workout-dot"></span>
+                        <span class="workout-count">
+                            ${delDia.length} entrenamiento${delDia.length === 1 ? "" : "s"}
+                        </span>
+                    ` : ""}
+                `;
+
+                button.addEventListener("click", () => {
+                    document
+                        .querySelectorAll(".calendar-day.selected")
+                        .forEach(el => el.classList.remove("selected"));
+
+                    button.classList.add("selected");
+                    mostrarDetalleDia(key);
+                });
+
+                calendarGrid.appendChild(button);
+            }
+        }
+
+        filter.addEventListener("change", () => {
+            mostrarSesiones(filter.value);
+        });
+
+        exerciseFilter.addEventListener("change", () => {
+            mostrarProgreso(exerciseFilter.value);
+        });
+
+        metricFilter.addEventListener("change", () => {
+            if (exerciseFilter.value) {
+                mostrarProgreso(exerciseFilter.value);
+            }
+        });
+
+        prevMonth.addEventListener("click", () => {
+            calendarioActual = new Date(
+                calendarioActual.getFullYear(),
+                calendarioActual.getMonth() - 1,
+                1
+            );
+            renderCalendario();
+        });
+
+        nextMonth.addEventListener("click", () => {
+            calendarioActual = new Date(
+                calendarioActual.getFullYear(),
+                calendarioActual.getMonth() + 1,
+                1
+            );
+            renderCalendario();
+        });
+
+        mostrarSesiones("Todos");
+        renderCalendario();
 
     } catch(error) {
-
         status.textContent =
             "No se pudieron cargar los entrenamientos.";
 
         console.error(error);
-
     }
-
 }
 
 cargarEntrenamientos();
-
 </script>
 
 </body>
