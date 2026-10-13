@@ -18,13 +18,13 @@
 
             /* Jerarquía tipográfica derivada de la paleta azul */
             --title-main: #ffffff;
-            --title-section: #c7d3ff;
-            --title-card: #b7c7ff;
-            --text-accent: #8ea6ff;
-            --text-label: #9db0f2;
-            --text-body: #d7e0ff;
-            --muted: #aab8e8;
-            --text-dim: #7f93cc;
+            --title-section: #8fa8ff;
+            --title-card: #c7d3ff;
+            --text-accent: #5f82ff;
+            --text-label: #b8c6f6;
+            --text-body: #e7ecff;
+            --muted: #93a7df;
+            --text-dim: #7187c6;
 
             --line: rgba(255,255,255,.12);
             --surface: rgba(1, 28, 107, .58);
@@ -118,7 +118,7 @@
             gap: 10px;
             padding: 12px 13px;
             border-radius: 12px;
-            color: var(--text-label);
+            color: #9fb3ff;
             transition: .2s ease;
         }
 
@@ -172,7 +172,7 @@
         }
 
         .eyebrow {
-            color: var(--text-accent);
+            color: #6f8cff;
             font-size: 13px;
             font-weight: 700;
             letter-spacing: .08em;
@@ -236,10 +236,11 @@
         }
 
         .stat-label {
-            color: var(--text-accent);
+            color: #7f9cff;
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 800;
             margin-bottom: 18px;
+            letter-spacing: .02em;
         }
 
         .stat-value {
@@ -250,7 +251,7 @@
         }
 
         .stat-sub {
-            color: var(--text-label);
+            color: #b8c6f6;
             font-size: 12px;
             margin-top: 8px;
         }
@@ -276,6 +277,19 @@
             margin: 0;
             font-size: 21px;
             color: var(--title-section);
+            letter-spacing: -.01em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-head h2::before {
+            content: "";
+            width: 4px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--blue-500);
+            box-shadow: 0 0 18px rgba(2,59,230,.55);
         }
 
         .section-head p {
@@ -348,12 +362,14 @@
         }
 
         .overview-row span {
-            color: var(--text-label);
+            color: #9eb2ff;
+            font-weight: 600;
         }
 
         .overview-row strong {
-            color: var(--title-main);
+            color: #ffffff;
             text-align: right;
+            font-weight: 800;
         }
 
         .panel {
@@ -386,11 +402,11 @@
         .field label {
             display: block;
             margin-bottom: 7px;
-            color: var(--text-accent);
+            color: #7f9cff;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: .06em;
+            letter-spacing: .08em;
         }
 
         select {
@@ -423,9 +439,9 @@
         }
 
         .summary-label {
-            color: var(--text-accent);
+            color: #8fa8ff;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .summary-value {
@@ -498,7 +514,8 @@
         .calendar-toolbar h2 {
             margin: 0;
             text-align: center;
-            color: var(--title-section);
+            color: #9fb3ff;
+            font-weight: 800;
         }
 
         .calendar-nav {
@@ -520,7 +537,7 @@
         }
 
         .calendar-weekdays {
-            color: var(--text-accent);
+            color: #89a1ff;
             font-size: 12px;
             text-align: center;
             margin-bottom: 8px;
@@ -617,7 +634,7 @@
         .session-head h3 {
             margin: 0;
             font-size: 19px;
-            color: var(--title-section);
+            color: #9fb3ff;
         }
 
         .meta {
@@ -642,7 +659,7 @@
         .exercise strong {
             display: block;
             margin-bottom: 5px;
-            color: var(--title-card);
+            color: #d3dcff;
         }
 
         .exercise span {
@@ -940,7 +957,7 @@
             <section id="history" class="panel">
                 <div class="history-toolbar">
                     <div>
-                        <h2 style="margin:0; color:var(--title-section);">Historial</h2>
+                        <h2 style="margin:0; color:#8fa8ff;">Historial</h2>
                         <div id="status" class="status">Cargando entrenamientos...</div>
                     </div>
 
