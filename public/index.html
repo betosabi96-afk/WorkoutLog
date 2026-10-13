@@ -15,7 +15,17 @@
 
             --white: #ffffff;
             --text: #f6f8ff;
+
+            /* Jerarquía tipográfica derivada de la paleta azul */
+            --title-main: #ffffff;
+            --title-section: #c7d3ff;
+            --title-card: #b7c7ff;
+            --text-accent: #8ea6ff;
+            --text-label: #9db0f2;
+            --text-body: #d7e0ff;
             --muted: #aab8e8;
+            --text-dim: #7f93cc;
+
             --line: rgba(255,255,255,.12);
             --surface: rgba(1, 28, 107, .58);
             --surface-2: rgba(1, 37, 143, .42);
@@ -89,10 +99,11 @@
         .brand-copy strong {
             display: block;
             font-size: 19px;
+            color: var(--title-main);
         }
 
         .brand-copy span {
-            color: var(--muted);
+            color: var(--text-label);
             font-size: 12px;
         }
 
@@ -107,14 +118,19 @@
             gap: 10px;
             padding: 12px 13px;
             border-radius: 12px;
-            color: var(--muted);
+            color: var(--text-label);
             transition: .2s ease;
         }
 
-        .nav a:hover,
+        .nav a:hover {
+            color: var(--title-section);
+            background: rgba(2,59,230,.12);
+        }
+
         .nav a.active {
             color: var(--white);
-            background: rgba(2,59,230,.22);
+            background: rgba(2,59,230,.30);
+            box-shadow: inset 3px 0 0 var(--blue-500);
         }
 
         .nav-icon {
@@ -156,7 +172,7 @@
         }
 
         .eyebrow {
-            color: #8ea6ff;
+            color: var(--text-accent);
             font-size: 13px;
             font-weight: 700;
             letter-spacing: .08em;
@@ -168,11 +184,12 @@
             margin: 0;
             font-size: clamp(30px, 4vw, 46px);
             letter-spacing: -.03em;
+            color: var(--title-main);
         }
 
         .topbar p {
             margin: 8px 0 0;
-            color: var(--muted);
+            color: var(--text-body);
         }
 
         .refresh-badge {
@@ -219,19 +236,21 @@
         }
 
         .stat-label {
-            color: var(--muted);
+            color: var(--text-accent);
             font-size: 13px;
+            font-weight: 700;
             margin-bottom: 18px;
         }
 
         .stat-value {
+            color: var(--title-main);
             font-size: 31px;
             font-weight: 800;
             letter-spacing: -.02em;
         }
 
         .stat-sub {
-            color: #8ea6ff;
+            color: var(--text-label);
             font-size: 12px;
             margin-top: 8px;
         }
@@ -256,11 +275,12 @@
         .section-head h2 {
             margin: 0;
             font-size: 21px;
+            color: var(--title-section);
         }
 
         .section-head p {
             margin: 4px 0 0;
-            color: var(--muted);
+            color: var(--text-label);
             font-size: 13px;
         }
 
@@ -328,10 +348,11 @@
         }
 
         .overview-row span {
-            color: var(--muted);
+            color: var(--text-label);
         }
 
         .overview-row strong {
+            color: var(--title-main);
             text-align: right;
         }
 
@@ -348,7 +369,7 @@
             display: grid;
             grid-template-columns: minmax(270px, .75fr) minmax(0, 2.25fr);
             gap: 18px;
-            align-items: stretch;
+            align-items: start;
         }
 
         .controls-card {
@@ -365,7 +386,7 @@
         .field label {
             display: block;
             margin-bottom: 7px;
-            color: var(--muted);
+            color: var(--text-accent);
             font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
@@ -402,13 +423,15 @@
         }
 
         .summary-label {
-            color: var(--muted);
+            color: var(--text-accent);
             font-size: 12px;
+            font-weight: 700;
         }
 
         .summary-value {
             display: block;
             margin-top: 4px;
+            color: var(--title-main);
             font-size: 22px;
             font-weight: 800;
         }
@@ -424,13 +447,13 @@
             border-radius: 11px;
             background: rgba(2,49,189,.19);
             border: 1px solid rgba(2,59,230,.20);
-            color: var(--muted);
+            color: var(--text-body);
             font-size: 13px;
         }
 
         .progress-entry strong {
             display: block;
-            color: var(--white);
+            color: var(--title-card);
             margin-bottom: 4px;
         }
 
@@ -475,7 +498,7 @@
         .calendar-toolbar h2 {
             margin: 0;
             text-align: center;
-            text-transform: capitalize;
+            color: var(--title-section);
         }
 
         .calendar-nav {
@@ -497,7 +520,7 @@
         }
 
         .calendar-weekdays {
-            color: var(--muted);
+            color: var(--text-accent);
             font-size: 12px;
             text-align: center;
             margin-bottom: 8px;
@@ -530,6 +553,7 @@
         }
 
         .day-number {
+            color: var(--title-main);
             font-weight: 800;
         }
 
@@ -593,10 +617,11 @@
         .session-head h3 {
             margin: 0;
             font-size: 19px;
+            color: var(--title-section);
         }
 
         .meta {
-            color: var(--muted);
+            color: var(--text-label);
             font-size: 13px;
         }
 
@@ -617,20 +642,21 @@
         .exercise strong {
             display: block;
             margin-bottom: 5px;
+            color: var(--title-card);
         }
 
         .exercise span {
-            color: var(--muted);
+            color: var(--text-body);
             font-size: 13px;
         }
 
         .status {
-            color: var(--muted);
+            color: var(--text-label);
             font-size: 13px;
         }
 
         .accent {
-            color: #8ea6ff;
+            color: var(--text-accent);
         }
 
         @media (max-width: 1100px) {
@@ -914,7 +940,7 @@
             <section id="history" class="panel">
                 <div class="history-toolbar">
                     <div>
-                        <h2 style="margin:0;">Historial</h2>
+                        <h2 style="margin:0; color:var(--title-section);">Historial</h2>
                         <div id="status" class="status">Cargando entrenamientos...</div>
                     </div>
 
@@ -1628,13 +1654,16 @@ async function cargarEntrenamientos() {
             const year = calendarioActual.getFullYear();
             const month = calendarioActual.getMonth();
 
+            const nombreMes =
+                calendarioActual.toLocaleDateString("es-MX", {
+                    month: "long"
+                });
+
             calendarTitle.textContent =
-                calendarioActual
-                    .toLocaleDateString("es-MX", {
-                        month: "long",
-                        year: "numeric"
-                    })
-                    .replace(/^./, char => char.toUpperCase());
+                nombreMes.charAt(0).toUpperCase() +
+                nombreMes.slice(1) +
+                " de " +
+                year;
 
             const firstDay =
                 new Date(year, month, 1).getDay();
@@ -1814,6 +1843,44 @@ async function cargarEntrenamientos() {
         console.error(error);
     }
 }
+
+function activarNavegacionPorScroll() {
+    const links = [...document.querySelectorAll(".nav a")];
+
+    const secciones = links
+        .map(link => {
+            const id = link.getAttribute("href");
+            return {
+                link,
+                section: document.querySelector(id)
+            };
+        })
+        .filter(item => item.section);
+
+    function actualizar() {
+        const referencia = window.scrollY + window.innerHeight * 0.28;
+
+        let activa = secciones[0];
+
+        secciones.forEach(item => {
+            if (item.section.offsetTop <= referencia) {
+                activa = item;
+            }
+        });
+
+        links.forEach(link => link.classList.remove("active"));
+
+        if (activa) {
+            activa.link.classList.add("active");
+        }
+    }
+
+    window.addEventListener("scroll", actualizar, { passive: true });
+    window.addEventListener("resize", actualizar);
+    actualizar();
+}
+
+activarNavegacionPorScroll();
 
 cargarEntrenamientos();
 </script>
