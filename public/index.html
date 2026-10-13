@@ -345,6 +345,7 @@
 
 <script>
 async function cargarEntrenamientos() {
+    const AUTO_REFRESH_MS = 10000;
     const status = document.getElementById("status");
     const container = document.getElementById("sessions");
     const filter = document.getElementById("filter");
@@ -381,6 +382,14 @@ async function cargarEntrenamientos() {
             filter.appendChild(option);
         });
 
+        const filtroGuardado = sessionStorage.getItem("workout_filter");
+        if (
+            filtroGuardado &&
+            [...filter.options].some(option => option.value === filtroGuardado)
+        ) {
+            filter.value = filtroGuardado;
+        }
+
         const ejercicios = [...new Set(
             sessions.flatMap(session =>
                 Array.isArray(session.exercises)
@@ -395,6 +404,26 @@ async function cargarEntrenamientos() {
             option.textContent = ejercicio;
             exerciseFilter.appendChild(option);
         });
+
+        const ejercicioGuardado = sessionStorage.getItem("workout_exercise");
+        if (
+            ejercicioGuardado &&
+            [...exerciseFilter.options].some(
+                option => option.value === ejercicioGuardado
+            )
+        ) {
+            exerciseFilter.value = ejercicioGuardado;
+        }
+
+        const metricaGuardada = sessionStorage.getItem("workout_metric");
+        if (
+            metricaGuardada &&
+            [...metricFilter.options].some(
+                option => option.value === metricaGuardada
+            )
+        ) {
+            metricFilter.value = metricaGuardada;
+        }
 
         function crearHistorialEjercicio(nombreEjercicio) {
             const historial = [];
@@ -622,6 +651,24 @@ async function cargarEntrenamientos() {
             1
         );
 
+        const mesGuardado = sessionStorage.getItem("workout_calendar_month");
+        if (mesGuardado && /^\d{4}-\d{2}$/.test(mesGuardado)) {
+            const [yearGuardado, monthGuardado] =
+                mesGuardado.split("-").map(Number);
+
+            calendarioActual = new Date(
+                yearGuardado,
+                monthGuardado - 1,
+                1
+            );
+        }
+
+        function guardarMesCalendario() {
+            const y = calendarioActual.getFullYear();
+            const m = String(calendarioActual.getMonth() + 1).padStart(2, "0");
+            sessionStorage.setItem("workout_calendar_month", `${y}-${m}`);
+        }
+
         function mostrarDetalleDia(key) {
             const delDia = sesionesPorDia.get(key) || [];
 
@@ -718,14 +765,18 @@ async function cargarEntrenamientos() {
         }
 
         filter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_filter", filter.value);
             mostrarSesiones(filter.value);
         });
 
         exerciseFilter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_exercise", exerciseFilter.value);
             mostrarProgreso(exerciseFilter.value);
         });
 
         metricFilter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_metric", metricFilter.value);
+
             if (exerciseFilter.value) {
                 mostrarProgreso(exerciseFilter.value);
             }
@@ -737,6 +788,7 @@ async function cargarEntrenamientos() {
                 calendarioActual.getMonth() - 1,
                 1
             );
+            guardarMesCalendario();
             renderCalendario();
         });
 
@@ -746,11 +798,57 @@ async function cargarEntrenamientos() {
                 calendarioActual.getMonth() + 1,
                 1
             );
+            guardarMesCalendario();
             renderCalendario();
         });
 
-        mostrarSesiones("Todos");
+        mostrarSesiones(filter.value);
+
+        if (exerciseFilter.value) {
+            mostrarProgreso(exerciseFilter.value);
+        }
+
         renderCalendario();
+
+        const estadoInicial = JSON.stringify(sessions);
+
+        setInterval(async () => {
+            try {
+                const refreshResponse = await fetch("/api/sessions", {
+                    cache: "no-store"
+                });
+
+                if (!refreshResponse.ok) {
+                    return;
+                }
+
+                const sesionesActualizadas =
+                    await refreshResponse.json();
+
+                const estadoActual =
+                    JSON.stringify(sesionesActualizadas);
+
+                if (estadoActual !== estadoInicial) {
+                    sessionStorage.setItem("workout_filter", filter.value);
+                    sessionStorage.setItem(
+                        "workout_exercise",
+                        exerciseFilter.value
+                    );
+                    sessionStorage.setItem(
+                        "workout_metric",
+                        metricFilter.value
+                    );
+                    guardarMesCalendario();
+
+                    window.location.reload();
+                }
+            } catch (refreshError) {
+                console.warn(
+                    "No se pudo comprobar si hay nuevos entrenamientos.",
+                    refreshError
+                );
+            }
+        }, AUTO_REFRESH_MS);
 
     } catch(error) {
         status.textContent =
