@@ -1,874 +1,2689 @@
-from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse
-from pathlib import Path
-from datetime import datetime, timezone, timedelta
-import sqlite3
-import json
-import uuid
-import os
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkoutLog · Dashboard</title>
 
-import psycopg
-from psycopg.rows import dict_row
+    <style>
+        :root {
+            /* Nueva paleta */
+            --slate-900: #2D3F54;
+            --slate-700: #52647A;
+            --green: #73CC80;
+            --blue-800: #004C94;
+            --blue-600: #006ECF;
+            --blue-400: #3C93FA;
+            --cyan: #00D4C6;
+            --teal-500: #0FA69D;
+            --teal-700: #028183;
+
+            --white: #ffffff;
+            --text: #ffffff;
+
+            /* Jerarquía tipográfica */
+            --title-main: #ffffff;
+            --title-section: #73CC80;
+            --title-card: #00D4C6;
+            --text-accent: #3C93FA;
+            --text-label: rgba(255,255,255,.78);
+            --text-body: rgba(255,255,255,.90);
+            --muted: rgba(255,255,255,.68);
+            --text-dim: rgba(255,255,255,.52);
+
+            --line: rgba(255,255,255,.13);
+            --surface: rgba(255,255,255,.06);
+            --surface-2: rgba(0,76,148,.18);
+            --surface-3: rgba(0,212,198,.10);
+            --shadow: 0 18px 50px rgba(0,0,0,.20);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                         "Segoe UI", sans-serif;
+            color: var(--text);
+            background: #2D3F54;
+        }
+
+        button,
+        select {
+            font: inherit;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 250px minmax(0, 1fr);
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            padding: 28px 20px;
+            background: #004C94;
+            border-right: 1px solid var(--line);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 36px;
+        }
+
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+            font-size: 20px;
+            background: var(--blue-600);
+            box-shadow: 0 10px 28px rgba(60,147,250,.22);
+        }
+
+        .brand-copy strong {
+            display: block;
+            font-size: 19px;
+            color: var(--title-main);
+        }
+
+        .brand-copy span {
+            color: var(--text-label);
+            font-size: 12px;
+        }
+
+        .nav {
+            display: grid;
+            gap: 8px;
+        }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 13px;
+            border-radius: 12px;
+            color: #00D4C6;
+            transition: .2s ease;
+        }
+
+        .nav a:hover {
+            color: var(--title-section);
+            background: rgba(60,147,250,.12);
+        }
+
+        .nav a.active {
+            color: var(--white);
+            background: rgba(60,147,250,.22);
+            box-shadow: inset 3px 0 0 var(--cyan);
+        }
+
+        .nav-icon {
+            width: 24px;
+            text-align: center;
+            font-size: 17px;
+        }
+
+        .sidebar-note {
+            position: absolute;
+            left: 20px;
+            right: 20px;
+            bottom: 22px;
+            padding: 13px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255,255,255,.04);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .main {
+            min-width: 0;
+            padding: 34px 38px 60px;
+        }
+
+        .content {
+            width: min(1500px, 100%);
+            margin: 0 auto;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .eyebrow {
+            color: #3C93FA;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .topbar h1 {
+            margin: 0;
+            font-size: clamp(30px, 4vw, 46px);
+            letter-spacing: -.03em;
+            color: var(--title-main);
+        }
+
+        .topbar p {
+            margin: 8px 0 0;
+            color: var(--text-body);
+        }
+
+        .refresh-badge {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 13px;
+            border-radius: 999px;
+            color: #dfe6ff;
+            background: rgba(0,76,148,.28);
+            border: 1px solid rgba(0,212,198,.30);
+            font-size: 13px;
+        }
+
+        .refresh-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--blue-600);
+            box-shadow: 0 0 0 6px rgba(0,212,198,.12);
+        }
+
+        .grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            margin-bottom: 18px;
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            background: #34495F;
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card {
+            padding: 20px;
+            min-height: 132px;
+        }
+
+        .stat-label {
+            color: #3C93FA;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 18px;
+            letter-spacing: .02em;
+        }
+
+        .stat-value {
+            color: var(--title-main);
+            font-size: 31px;
+            font-weight: 800;
+            letter-spacing: -.02em;
+        }
+
+        .stat-sub {
+            color: rgba(255,255,255,.78);
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .dashboard-grid {
+            grid-template-columns: 1.05fr 1.95fr;
+            margin-bottom: 18px;
+        }
+
+        .section-card {
+            padding: 22px;
+        }
+
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .section-head h2 {
+            margin: 0;
+            font-size: 21px;
+            color: var(--title-section);
+            letter-spacing: -.01em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-head h2::before {
+            content: "";
+            width: 4px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--blue-600);
+            box-shadow: 0 0 18px rgba(2,59,230,.55);
+        }
+
+        .section-head p {
+            margin: 4px 0 0;
+            color: var(--text-label);
+            font-size: 13px;
+        }
+
+        .activity-week {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .activity-day {
+            min-width: 0;
+            text-align: center;
+        }
+
+        .activity-circle {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 8px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,.04);
+            color: var(--muted);
+            font-weight: 800;
+        }
+
+        .activity-day.done .activity-circle {
+            color: var(--white);
+            border-color: var(--blue-600);
+            background: #34495F;
+            box-shadow: 0 8px 22px rgba(2,59,230,.22);
+        }
+
+        .activity-day span {
+            display: block;
+            color: var(--muted);
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .activity-day strong {
+            display: block;
+            margin-top: 3px;
+            font-size: 12px;
+        }
+
+        .overview-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .overview-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            padding: 13px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .overview-row:last-child {
+            border-bottom: 0;
+        }
+
+        .overview-row span {
+            color: rgba(255,255,255,.78);
+            font-weight: 600;
+        }
+
+        .overview-row strong {
+            color: #ffffff;
+            text-align: right;
+            font-weight: 800;
+        }
+
+        .panel {
+            margin-top: 18px;
+            padding: 22px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: #34495F;
+            box-shadow: var(--shadow);
+        }
+
+        .progress-layout {
+            display: grid;
+            grid-template-columns: minmax(270px, .75fr) minmax(0, 2.25fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .controls-card {
+            padding: 18px;
+            border-radius: 15px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,.035);
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 7px;
+            color: #3C93FA;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 13px;
+            border-radius: 11px;
+            border: 1px solid rgba(255,255,255,.14);
+            color: var(--white);
+            background: var(--blue-800);
+            outline: none;
+        }
+
+        select:focus {
+            border-color: var(--blue-600);
+            box-shadow: 0 0 0 3px rgba(0,212,198,.15);
+        }
+
+        .progress-summary {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .summary-card {
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #32475B;
+        }
+
+        .summary-label {
+            color: #73CC80;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .summary-value {
+            display: block;
+            margin-top: 4px;
+            color: var(--title-main);
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        #progressResult {
+            margin-top: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .progress-entry {
+            padding: 12px;
+            border-radius: 11px;
+            background: rgba(0,76,148,.26);
+            border: 1px solid rgba(0,212,198,.16);
+            color: var(--text-body);
+            font-size: 13px;
+        }
+
+        .progress-entry strong {
+            display: block;
+            color: var(--title-card);
+            margin-bottom: 4px;
+        }
+
+        .chart-card {
+            padding: 14px;
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: #26384A;
+            min-width: 0;
+        }
+
+        #progressChart {
+            min-height: 360px;
+            width: 100%;
+            display: grid;
+            align-items: stretch;
+        }
+
+        #progressChart svg {
+            display: block;
+            width: 100%;
+            height: 360px;
+        }
+
+        .chart-empty {
+            display: grid;
+            place-items: center;
+            min-height: 340px;
+            color: var(--muted);
+            text-align: center;
+            padding: 24px;
+        }
+
+        .calendar-toolbar {
+            display: grid;
+            grid-template-columns: 48px 1fr 48px;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .calendar-toolbar h2 {
+            margin: 0;
+            text-align: center;
+            color: #00D4C6;
+            font-weight: 800;
+        }
+
+        .calendar-nav {
+            width: 48px;
+            height: 48px;
+            border: 0;
+            border-radius: 12px;
+            color: var(--white);
+            background: var(--blue-600);
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        .calendar-weekdays,
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .calendar-weekdays {
+            color: #3C93FA;
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .calendar-day {
+            min-height: 105px;
+            padding: 11px;
+            border: 1px solid var(--line);
+            border-radius: 13px;
+            color: var(--white);
+            background: #26384A;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .calendar-day.empty {
+            opacity: .18;
+            pointer-events: none;
+        }
+
+        .calendar-day.has-workout {
+            border-color: rgba(0,212,198,.42);
+            background: rgba(0,129,131,.30);
+        }
+
+        .calendar-day.selected {
+            outline: 2px solid var(--blue-600);
+            background: rgba(60,147,250,.22);
+        }
+
+        .day-number {
+            color: var(--title-main);
+            font-weight: 800;
+        }
+
+        .workout-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-left: 5px;
+            border-radius: 50%;
+            background: var(--blue-600);
+        }
+
+        .workout-count {
+            display: block;
+            margin-top: 9px;
+            color: #d9e2ff;
+            font-size: 12px;
+        }
+
+        #calendarDetails {
+            margin-top: 18px;
+        }
+
+        .calendar-detail-title {
+            margin: 0 0 12px;
+        }
+
+        .history-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .history-toolbar select {
+            width: min(300px, 100%);
+        }
+
+        #sessions {
+            display: grid;
+            gap: 14px;
+        }
+
+        .session {
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: #3A5068;
+            overflow: hidden;
+        }
+
+        .session-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            align-items: center;
+            padding: 17px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .session-head h3 {
+            margin: 0;
+            font-size: 19px;
+            color: #00D4C6;
+        }
+
+        .meta {
+            color: var(--text-label);
+            font-size: 13px;
+        }
+
+        .session-exercises {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            padding: 14px;
+        }
+
+        .exercise {
+            padding: 13px 14px;
+            border-radius: 11px;
+            background: rgba(0,76,148,.28);
+            border: 1px solid rgba(255,255,255,.08);
+        }
+
+        .exercise strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #FFFFFF;
+        }
+
+        .exercise span {
+            color: var(--text-body);
+            font-size: 13px;
+        }
+
+        .status {
+            color: var(--text-label);
+            font-size: 13px;
+        }
+
+        .accent {
+            color: var(--text-accent);
+        }
 
 
-# ==========================================
-# CONFIGURACIÓN
-# ==========================================
+        .stat-card:nth-child(1) .stat-value {
+            color: var(--white);
+        }
 
-BASE_DIR = Path(__file__).resolve().parent
-PUBLIC_DIR = BASE_DIR / "public"
-DB_PATH = BASE_DIR / "data" / "workoutlog.sqlite3"
+        .stat-card:nth-child(2) .stat-value {
+            color: var(--blue-400);
+        }
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-PORT = int(os.environ.get("PORT", "3000"))
+        .stat-card:nth-child(3) .stat-value {
+            color: var(--cyan);
+        }
 
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        .stat-card:nth-child(4) .stat-value {
+            color: var(--green);
+        }
 
+        .summary-card:nth-child(2) .summary-value {
+            color: var(--green);
+        }
 
-# ==========================================
-# BASE DE DATOS
-# ==========================================
+        .refresh-dot {
+            background: var(--cyan);
+        }
 
-def is_postgres():
-    return bool(DATABASE_URL)
+        .activity-day.done .activity-circle {
+            background: #34495F;
+            border-color: var(--cyan);
+        }
 
+        .calendar-day.has-workout {
+            border-color: rgba(0,212,198,.42);
+            background: rgba(2,129,131,.30);
+        }
 
-def connect():
-    if is_postgres():
-        return psycopg.connect(
-            DATABASE_URL,
-            row_factory=dict_row
-        )
-
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    con.execute("PRAGMA foreign_keys = ON")
-    return con
-
-
-def sql_placeholder():
-    return "%s" if is_postgres() else "?"
-
-
-def init_db():
-    con = connect()
-
-    try:
-        if is_postgres():
-            with con.cursor() as cur:
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS sessions (
-                        id TEXT PRIMARY KEY,
-                        activity TEXT NOT NULL,
-                        started_at TEXT NOT NULL,
-                        total_duration_minutes INTEGER NOT NULL DEFAULT 0,
-                        intensity TEXT NOT NULL DEFAULT 'Moderada',
-                        notes TEXT NOT NULL DEFAULT ''
-                    )
-                """)
-
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS exercises (
-                        id TEXT PRIMARY KEY,
-                        session_id TEXT NOT NULL,
-                        name TEXT NOT NULL,
-                        sets INTEGER NOT NULL DEFAULT 0,
-                        reps INTEGER NOT NULL DEFAULT 0,
-                        weight_kg REAL NOT NULL DEFAULT 0,
-                        duration_minutes INTEGER NOT NULL DEFAULT 0,
-
-                        FOREIGN KEY (session_id)
-                        REFERENCES sessions(id)
-                        ON DELETE CASCADE
-                    )
-                """)
-        else:
-            con.executescript("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    id TEXT PRIMARY KEY,
-                    activity TEXT NOT NULL,
-                    started_at TEXT NOT NULL,
-                    total_duration_minutes INTEGER NOT NULL DEFAULT 0,
-                    intensity TEXT NOT NULL DEFAULT 'Moderada',
-                    notes TEXT NOT NULL DEFAULT ''
-                );
-
-                CREATE TABLE IF NOT EXISTS exercises (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    sets INTEGER NOT NULL DEFAULT 0,
-                    reps INTEGER NOT NULL DEFAULT 0,
-                    weight_kg REAL NOT NULL DEFAULT 0,
-                    duration_minutes INTEGER NOT NULL DEFAULT 0,
-
-                    FOREIGN KEY (session_id)
-                    REFERENCES sessions(id)
-                    ON DELETE CASCADE
-                );
-            """)
-
-        con.commit()
-
-    finally:
-        con.close()
+        .calendar-day.selected {
+            outline: 2px solid var(--cyan);
+            background: rgba(0,212,198,.18);
+        }
 
 
-# ==========================================
-# UTILIDADES
-# ==========================================
+        .monthly-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
 
-def session_to_dict(session_row, exercise_rows):
-    return {
-        "id": session_row["id"],
-        "activity": session_row["activity"],
-        "startedAt": session_row["started_at"],
-        "totalDurationMinutes": session_row["total_duration_minutes"],
-        "intensity": session_row["intensity"],
-        "notes": session_row["notes"],
-        "exercises": [
-            {
-                "id": row["id"],
-                "name": row["name"],
-                "sets": row["sets"],
-                "reps": row["reps"],
-                "weightKg": row["weight_kg"],
-                "durationMinutes": row["duration_minutes"]
+        .monthly-toolbar .field {
+            width: min(320px, 100%);
+            margin: 0;
+        }
+
+        .monthly-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .monthly-stat {
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: #34495F;
+        }
+
+        .monthly-stat-label {
+            color: var(--text-accent);
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .monthly-stat-value {
+            color: var(--white);
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .monthly-stat-note {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .monthly-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1.45fr;
+            gap: 18px;
+            align-items: stretch;
+        }
+
+        .comparison-card,
+        .monthly-chart-card {
+            border: 1px solid var(--line);
+            border-radius: 15px;
+            background: #34495F;
+            padding: 18px;
+        }
+
+        .comparison-card h3,
+        .monthly-chart-card h3 {
+            margin: 0 0 14px;
+            color: var(--title-card);
+            font-size: 17px;
+        }
+
+        .comparison-list {
+            display: grid;
+            gap: 4px;
+        }
+
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .comparison-row:last-child {
+            border-bottom: 0;
+        }
+
+        .comparison-row span:first-child {
+            color: var(--text-body);
+        }
+
+        .comparison-current {
+            color: var(--white);
+            font-weight: 800;
+        }
+
+        .comparison-change {
+            min-width: 82px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .comparison-change.positive {
+            color: var(--green);
+        }
+
+        .comparison-change.negative {
+            color: #ff8f8f;
+        }
+
+        .comparison-change.neutral {
+            color: var(--muted);
+        }
+
+        .monthly-chart-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 8px;
+        }
+
+        .monthly-chart-toolbar select {
+            width: 190px;
+        }
+
+        #monthlyChart {
+            min-height: 300px;
+            display: grid;
+            align-items: stretch;
+        }
+
+        #monthlyChart svg {
+            display: block;
+            width: 100%;
+            height: 300px;
+        }
+
+        .monthly-empty {
+            display: grid;
+            place-items: center;
+            min-height: 280px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        @media (max-width: 1100px) {
+            .app-shell {
+                grid-template-columns: 210px minmax(0, 1fr);
             }
-            for row in exercise_rows
-        ]
+
+            .main {
+                padding: 28px 24px 50px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .dashboard-grid,
+            .progress-layout,
+            .monthly-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .monthly-stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .session-exercises {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .app-shell {
+                display: block;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+                padding: 16px;
+            }
+
+            .brand {
+                margin-bottom: 12px;
+            }
+
+            .nav {
+                display: flex;
+                overflow-x: auto;
+            }
+
+            .nav a {
+                flex: 0 0 auto;
+            }
+
+            .sidebar-note {
+                display: none;
+            }
+
+            .main {
+                padding: 20px 14px 40px;
+            }
+
+            .topbar {
+                display: block;
+            }
+
+            .refresh-badge {
+                margin-top: 14px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .monthly-toolbar {
+                display: grid;
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .monthly-toolbar .field {
+                width: 100%;
+            }
+
+            .monthly-stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .monthly-chart-toolbar {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .monthly-chart-toolbar select {
+                width: 100%;
+            }
+
+            .activity-week {
+                grid-template-columns: repeat(7, minmax(58px, 1fr));
+                overflow-x: auto;
+            }
+
+            .calendar-day {
+                min-height: 72px;
+                padding: 7px;
+            }
+
+            .workout-count {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="app-shell">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">W</div>
+            <div class="brand-copy">
+                <strong>WorkoutLog</strong>
+                <span>Performance dashboard</span>
+            </div>
+        </div>
+
+        <nav class="nav">
+            <a class="active" href="#dashboard"><span class="nav-icon">▦</span> Dashboard</a>
+            <a href="#progress"><span class="nav-icon">↗</span> Progreso</a>
+            <a href="#statistics"><span class="nav-icon">◫</span> Estadísticas</a>
+            <a href="#calendar"><span class="nav-icon">□</span> Calendario</a>
+            <a href="#history"><span class="nav-icon">≡</span> Historial</a>
+        </nav>
+
+        <div class="sidebar-note">
+            Tus datos se consultan directamente desde WorkoutLog.
+            <br><br>
+            Actualización automática cada 10 segundos.
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="content">
+
+            <header class="topbar" id="dashboard">
+                <div>
+                    <div class="eyebrow">Overview</div>
+                    <h1>Tu progreso, de un vistazo.</h1>
+                    <p>Entrenamientos, evolución y regularidad en un solo dashboard.</p>
+                </div>
+
+                <div class="refresh-badge">
+                    <span class="refresh-dot"></span>
+                    Autoactualización · 10 s
+                </div>
+            </header>
+
+            <section class="grid stats-grid">
+                <article class="card stat-card">
+                    <div class="stat-label">Entrenamientos</div>
+                    <div class="stat-value" id="statWorkouts">—</div>
+                    <div class="stat-sub">sesiones agrupadas</div>
+                </article>
+
+                <article class="card stat-card">
+                    <div class="stat-label">Ejercicios distintos</div>
+                    <div class="stat-value" id="statExercises">—</div>
+                    <div class="stat-sub">en tu historial</div>
+                </article>
+
+                <article class="card stat-card">
+                    <div class="stat-label">Series acumuladas</div>
+                    <div class="stat-value" id="statSets">—</div>
+                    <div class="stat-sub">total registrado</div>
+                </article>
+
+                <article class="card stat-card">
+                    <div class="stat-label">Volumen estimado</div>
+                    <div class="stat-value" id="statVolume">—</div>
+                    <div class="stat-sub">series × reps × kg</div>
+                </article>
+            </section>
+
+            <section class="grid dashboard-grid">
+                <article class="card section-card">
+                    <div class="section-head">
+                        <div>
+                            <h2>Actividad reciente</h2>
+                            <p>Últimos 7 días del registro</p>
+                        </div>
+                    </div>
+
+                    <div class="activity-week" id="activityWeek"></div>
+                </article>
+
+                <article class="card section-card">
+                    <div class="section-head">
+                        <div>
+                            <h2>Resumen global</h2>
+                            <p>Indicadores calculados con tu historial</p>
+                        </div>
+                    </div>
+
+                    <div class="overview-list">
+                        <div class="overview-row">
+                            <span>Repeticiones acumuladas</span>
+                            <strong id="overviewReps">—</strong>
+                        </div>
+                        <div class="overview-row">
+                            <span>Peso máximo registrado</span>
+                            <strong id="overviewMaxWeight">—</strong>
+                        </div>
+                        <div class="overview-row">
+                            <span>Último entrenamiento</span>
+                            <strong id="overviewLastDate">—</strong>
+                        </div>
+                        <div class="overview-row">
+                            <span>Grupo más registrado</span>
+                            <strong id="overviewTopGroup">—</strong>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section id="progress" class="panel">
+                <div class="section-head">
+                    <div>
+                        <h2>Progreso por ejercicio</h2>
+                        <p>Compara peso, repeticiones o series a través del tiempo.</p>
+                    </div>
+                </div>
+
+                <div class="progress-layout">
+                    <div class="controls-card">
+
+                        <div class="field">
+                            <label for="exerciseFilter">Ejercicio</label>
+                            <select id="exerciseFilter">
+                                <option value="">Selecciona un ejercicio</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="metricFilter">Métrica</label>
+                            <select id="metricFilter">
+                                <option value="weightKg">Peso</option>
+                                <option value="reps">Repeticiones</option>
+                                <option value="sets">Series</option>
+                            </select>
+                        </div>
+
+                        <div class="progress-summary">
+                            <div class="summary-card">
+                                <span class="summary-label">Valor actual</span>
+                                <span id="summaryCurrent" class="summary-value">—</span>
+                            </div>
+
+                            <div class="summary-card">
+                                <span class="summary-label">Mejor marca</span>
+                                <span id="summaryBest" class="summary-value">—</span>
+                            </div>
+
+                            <div class="summary-card">
+                                <span class="summary-label">Cambio vs. anterior</span>
+                                <span id="summaryChange" class="summary-value">—</span>
+                            </div>
+                        </div>
+
+                        <div id="progressResult"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div id="progressChart">
+                            <div class="chart-empty">
+                                Selecciona un ejercicio para comenzar a analizar su evolución.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <section id="statistics" class="panel">
+                <div class="section-head">
+                    <div>
+                        <h2>Estadísticas mensuales</h2>
+                        <p>Compara volumen, frecuencia y carga de trabajo mes contra mes.</p>
+                    </div>
+                </div>
+
+                <div class="monthly-toolbar">
+                    <div class="field">
+                        <label for="monthFilter">Mes</label>
+                        <select id="monthFilter"></select>
+                    </div>
+
+                    <div class="field">
+                        <label for="monthlyMetric">Evolución</label>
+                        <select id="monthlyMetric">
+                            <option value="volume">Volumen</option>
+                            <option value="workouts">Entrenamientos</option>
+                            <option value="sets">Series</option>
+                            <option value="reps">Repeticiones</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="monthly-stats-grid">
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Entrenamientos</div>
+                        <div class="monthly-stat-value" id="monthWorkouts">—</div>
+                        <div class="monthly-stat-note">sesiones agrupadas</div>
+                    </div>
+
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Ejercicios distintos</div>
+                        <div class="monthly-stat-value" id="monthExercises">—</div>
+                        <div class="monthly-stat-note">durante el mes</div>
+                    </div>
+
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Series</div>
+                        <div class="monthly-stat-value" id="monthSets">—</div>
+                        <div class="monthly-stat-note">series acumuladas</div>
+                    </div>
+
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Repeticiones</div>
+                        <div class="monthly-stat-value" id="monthReps">—</div>
+                        <div class="monthly-stat-note">repeticiones acumuladas</div>
+                    </div>
+
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Volumen</div>
+                        <div class="monthly-stat-value" id="monthVolume">—</div>
+                        <div class="monthly-stat-note">series × reps × kg</div>
+                    </div>
+
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Peso máximo</div>
+                        <div class="monthly-stat-value" id="monthMaxWeight">—</div>
+                        <div class="monthly-stat-note">máximo registrado</div>
+                    </div>
+                </div>
+
+                <div class="monthly-comparison">
+                    <div class="comparison-card">
+                        <h3 id="comparisonTitle">Vs. mes anterior</h3>
+
+                        <div class="comparison-list">
+                            <div class="comparison-row">
+                                <span>Entrenamientos</span>
+                                <strong class="comparison-current" id="compareWorkoutsValue">—</strong>
+                                <span class="comparison-change neutral" id="compareWorkouts">—</span>
+                            </div>
+
+                            <div class="comparison-row">
+                                <span>Series</span>
+                                <strong class="comparison-current" id="compareSetsValue">—</strong>
+                                <span class="comparison-change neutral" id="compareSets">—</span>
+                            </div>
+
+                            <div class="comparison-row">
+                                <span>Repeticiones</span>
+                                <strong class="comparison-current" id="compareRepsValue">—</strong>
+                                <span class="comparison-change neutral" id="compareReps">—</span>
+                            </div>
+
+                            <div class="comparison-row">
+                                <span>Volumen</span>
+                                <strong class="comparison-current" id="compareVolumeValue">—</strong>
+                                <span class="comparison-change neutral" id="compareVolume">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="monthly-chart-card">
+                        <div class="monthly-chart-toolbar">
+                            <h3 style="margin:0;">Evolución de 6 meses</h3>
+                            <div class="meta" id="monthlyChartLabel"></div>
+                        </div>
+
+                        <div id="monthlyChart">
+                            <div class="monthly-empty">No hay datos suficientes todavía.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="calendar" class="panel">
+                <div class="section-head">
+                    <div>
+                        <h2>Regularidad</h2>
+                        <p>Consulta los entrenamientos registrados por día.</p>
+                    </div>
+                </div>
+
+                <div class="calendar-toolbar">
+                    <button id="prevMonth" class="calendar-nav" type="button" aria-label="Mes anterior">‹</button>
+                    <h2 id="calendarTitle">Calendario</h2>
+                    <button id="nextMonth" class="calendar-nav" type="button" aria-label="Mes siguiente">›</button>
+                </div>
+
+                <div class="calendar-weekdays" aria-hidden="true">
+                    <div>Dom</div>
+                    <div>Lun</div>
+                    <div>Mar</div>
+                    <div>Mié</div>
+                    <div>Jue</div>
+                    <div>Vie</div>
+                    <div>Sáb</div>
+                </div>
+
+                <div id="calendarGrid" class="calendar-grid"></div>
+                <div id="calendarDetails"></div>
+            </section>
+
+            <section id="history" class="panel">
+                <div class="history-toolbar">
+                    <div>
+                        <h2 style="margin:0; color:#73CC80;">Historial</h2>
+                        <div id="status" class="status">Cargando entrenamientos...</div>
+                    </div>
+
+                    <select id="filter">
+                        <option value="Todos">Todos los grupos</option>
+                    </select>
+                </div>
+
+                <div id="sessions"></div>
+            </section>
+
+        </div>
+    </main>
+
+</div>
+
+<script>
+async function cargarEntrenamientos() {
+    const AUTO_REFRESH_MS = 10000;
+
+    const status = document.getElementById("status");
+    const container = document.getElementById("sessions");
+    const filter = document.getElementById("filter");
+
+    const exerciseFilter = document.getElementById("exerciseFilter");
+    const metricFilter = document.getElementById("metricFilter");
+    const progressResult = document.getElementById("progressResult");
+    const progressChart = document.getElementById("progressChart");
+
+    const summaryCurrent = document.getElementById("summaryCurrent");
+    const summaryBest = document.getElementById("summaryBest");
+    const summaryChange = document.getElementById("summaryChange");
+
+    const monthFilter = document.getElementById("monthFilter");
+    const monthlyMetric = document.getElementById("monthlyMetric");
+
+    const monthWorkouts = document.getElementById("monthWorkouts");
+    const monthExercises = document.getElementById("monthExercises");
+    const monthSets = document.getElementById("monthSets");
+    const monthReps = document.getElementById("monthReps");
+    const monthVolume = document.getElementById("monthVolume");
+    const monthMaxWeight = document.getElementById("monthMaxWeight");
+
+    const comparisonTitle = document.getElementById("comparisonTitle");
+    const compareWorkoutsValue = document.getElementById("compareWorkoutsValue");
+    const compareSetsValue = document.getElementById("compareSetsValue");
+    const compareRepsValue = document.getElementById("compareRepsValue");
+    const compareVolumeValue = document.getElementById("compareVolumeValue");
+
+    const compareWorkouts = document.getElementById("compareWorkouts");
+    const compareSets = document.getElementById("compareSets");
+    const compareReps = document.getElementById("compareReps");
+    const compareVolume = document.getElementById("compareVolume");
+
+    const monthlyChart = document.getElementById("monthlyChart");
+    const monthlyChartLabel = document.getElementById("monthlyChartLabel");
+
+    const calendarGrid = document.getElementById("calendarGrid");
+    const calendarTitle = document.getElementById("calendarTitle");
+    const calendarDetails = document.getElementById("calendarDetails");
+    const prevMonth = document.getElementById("prevMonth");
+    const nextMonth = document.getElementById("nextMonth");
+
+    const statWorkouts = document.getElementById("statWorkouts");
+    const statExercises = document.getElementById("statExercises");
+    const statSets = document.getElementById("statSets");
+    const statVolume = document.getElementById("statVolume");
+
+    const overviewReps = document.getElementById("overviewReps");
+    const overviewMaxWeight = document.getElementById("overviewMaxWeight");
+    const overviewLastDate = document.getElementById("overviewLastDate");
+    const overviewTopGroup = document.getElementById("overviewTopGroup");
+
+    const activityWeek = document.getElementById("activityWeek");
+
+    try {
+        const response = await fetch("/api/sessions", { cache: "no-store" });
+
+        if (!response.ok) {
+            throw new Error("Error del servidor");
+        }
+
+        const sessions = await response.json();
+
+        function keyFecha(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+        }
+
+        function agruparSesionesPorFechaYActividad(listaSesiones) {
+            const mapa = new Map();
+
+            listaSesiones.forEach(session => {
+                const fechaObj = new Date(session.startedAt);
+                const fechaKey = keyFecha(fechaObj);
+                const activity = session.activity || "Sin categoría";
+                const key = `${fechaKey}__${activity}`;
+
+                if (!mapa.has(key)) {
+                    mapa.set(key, {
+                        fechaKey,
+                        fechaObj,
+                        activity,
+                        intensity: session.intensity || "",
+                        exercises: []
+                    });
+                }
+
+                const grupo = mapa.get(key);
+
+                if (!grupo.intensity && session.intensity) {
+                    grupo.intensity = session.intensity;
+                }
+
+                (session.exercises || []).forEach(exercise => {
+                    grupo.exercises.push(exercise);
+                });
+            });
+
+            return [...mapa.values()].sort((a, b) => b.fechaObj - a.fechaObj);
+        }
+
+        const agrupadasGlobal = agruparSesionesPorFechaYActividad(sessions);
+
+        const grupos = [...new Set(
+            sessions.map(session => session.activity).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, "es"));
+
+        grupos.forEach(grupo => {
+            const option = document.createElement("option");
+            option.value = grupo;
+            option.textContent = grupo;
+            filter.appendChild(option);
+        });
+
+        const filtroGuardado = sessionStorage.getItem("workout_filter");
+
+        if (
+            filtroGuardado &&
+            [...filter.options].some(option => option.value === filtroGuardado)
+        ) {
+            filter.value = filtroGuardado;
+        }
+
+        const ejercicios = [...new Set(
+            sessions.flatMap(session =>
+                Array.isArray(session.exercises)
+                    ? session.exercises.map(exercise => exercise.name).filter(Boolean)
+                    : []
+            )
+        )].sort((a, b) => a.localeCompare(b, "es"));
+
+        ejercicios.forEach(ejercicio => {
+            const option = document.createElement("option");
+            option.value = ejercicio;
+            option.textContent = ejercicio;
+            exerciseFilter.appendChild(option);
+        });
+
+        const ejercicioGuardado = sessionStorage.getItem("workout_exercise");
+
+        if (
+            ejercicioGuardado &&
+            [...exerciseFilter.options].some(
+                option => option.value === ejercicioGuardado
+            )
+        ) {
+            exerciseFilter.value = ejercicioGuardado;
+        }
+
+        const metricaGuardada = sessionStorage.getItem("workout_metric");
+
+        if (
+            metricaGuardada &&
+            [...metricFilter.options].some(
+                option => option.value === metricaGuardada
+            )
+        ) {
+            metricFilter.value = metricaGuardada;
+        }
+
+        function renderOverview() {
+            let totalSets = 0;
+            let totalReps = 0;
+            let volume = 0;
+            let maxWeight = 0;
+
+            const contadorGrupos = new Map();
+
+            sessions.forEach(session => {
+                const group = session.activity || "Sin categoría";
+                contadorGrupos.set(group, (contadorGrupos.get(group) || 0) + 1);
+
+                (session.exercises || []).forEach(exercise => {
+                    const sets = Number(exercise.sets) || 0;
+                    const reps = Number(exercise.reps) || 0;
+                    const weight = Number(exercise.weightKg) || 0;
+
+                    totalSets += sets;
+                    totalReps += sets * reps;
+                    volume += sets * reps * weight;
+                    maxWeight = Math.max(maxWeight, weight);
+                });
+            });
+
+            const topGroup =
+                [...contadorGrupos.entries()]
+                    .sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+
+            const latest =
+                sessions.length
+                    ? new Date(
+                        Math.max(
+                            ...sessions.map(session =>
+                                new Date(session.startedAt).getTime()
+                            )
+                        )
+                    )
+                    : null;
+
+            statWorkouts.textContent = agrupadasGlobal.length;
+            statExercises.textContent = ejercicios.length;
+            statSets.textContent = totalSets;
+            statVolume.textContent =
+                volume >= 1000
+                    ? `${(volume / 1000).toFixed(1)} t`
+                    : `${volume} kg`;
+
+            overviewReps.textContent = totalReps;
+            overviewMaxWeight.textContent = `${maxWeight} kg`;
+            overviewLastDate.textContent =
+                latest ? latest.toLocaleDateString("es-MX") : "—";
+            overviewTopGroup.textContent = topGroup;
+        }
+
+
+        function monthKey(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            return `${y}-${m}`;
+        }
+
+        function monthDateFromKey(key) {
+            const [year, month] = key.split("-").map(Number);
+            return new Date(year, month - 1, 1);
+        }
+
+        function monthLabel(key) {
+            const date = monthDateFromKey(key);
+            const mes = date.toLocaleDateString("es-MX", { month: "long" });
+
+            return (
+                mes.charAt(0).toUpperCase() +
+                mes.slice(1) +
+                " de " +
+                date.getFullYear()
+            );
+        }
+
+        function previousMonthKey(key) {
+            const date = monthDateFromKey(key);
+            date.setMonth(date.getMonth() - 1);
+            return monthKey(date);
+        }
+
+        function sessionsForMonth(key) {
+            return sessions.filter(
+                session => monthKey(new Date(session.startedAt)) === key
+            );
+        }
+
+        function statsForMonth(key) {
+            const monthlySessions = sessionsForMonth(key);
+            const grouped = agruparSesionesPorFechaYActividad(monthlySessions);
+
+            let totalSets = 0;
+            let totalReps = 0;
+            let volume = 0;
+            let maxWeight = 0;
+            const uniqueExercises = new Set();
+
+            monthlySessions.forEach(session => {
+                (session.exercises || []).forEach(exercise => {
+                    const sets = Number(exercise.sets) || 0;
+                    const reps = Number(exercise.reps) || 0;
+                    const weight = Number(exercise.weightKg) || 0;
+
+                    if (exercise.name) {
+                        uniqueExercises.add(exercise.name);
+                    }
+
+                    totalSets += sets;
+                    totalReps += sets * reps;
+                    volume += sets * reps * weight;
+                    maxWeight = Math.max(maxWeight, weight);
+                });
+            });
+
+            return {
+                workouts: grouped.length,
+                exercises: uniqueExercises.size,
+                sets: totalSets,
+                reps: totalReps,
+                volume,
+                maxWeight
+            };
+        }
+
+        function formatVolume(value) {
+            return value >= 1000
+                ? `${(value / 1000).toFixed(1)} t`
+                : `${value} kg`;
+        }
+
+        function comparisonText(current, previous) {
+            if (previous === 0) {
+                if (current === 0) {
+                    return { text: "—", className: "neutral" };
+                }
+
+                return { text: "Nuevo", className: "positive" };
+            }
+
+            const pct = ((current - previous) / previous) * 100;
+            const rounded = Math.round(pct);
+
+            if (rounded > 0) {
+                return {
+                    text: `+${rounded}%`,
+                    className: "positive"
+                };
+            }
+
+            if (rounded < 0) {
+                return {
+                    text: `${rounded}%`,
+                    className: "negative"
+                };
+            }
+
+            return { text: "0%", className: "neutral" };
+        }
+
+        function applyComparison(element, result) {
+            element.textContent = result.text;
+            element.className =
+                `comparison-change ${result.className}`;
+        }
+
+        function buildMonthOptions() {
+            monthFilter.innerHTML = "";
+
+            if (!sessions.length) {
+                const nowKey = monthKey(new Date());
+                const option = document.createElement("option");
+                option.value = nowKey;
+                option.textContent = monthLabel(nowKey);
+                monthFilter.appendChild(option);
+                return;
+            }
+
+            const dates = sessions.map(session =>
+                new Date(session.startedAt)
+            );
+
+            const minDate = new Date(
+                Math.min(...dates.map(date => date.getTime()))
+            );
+
+            const maxDate = new Date(
+                Math.max(...dates.map(date => date.getTime()))
+            );
+
+            const cursor = new Date(
+                minDate.getFullYear(),
+                minDate.getMonth(),
+                1
+            );
+
+            const end = new Date(
+                maxDate.getFullYear(),
+                maxDate.getMonth(),
+                1
+            );
+
+            const keys = [];
+
+            while (cursor <= end) {
+                keys.push(monthKey(cursor));
+                cursor.setMonth(cursor.getMonth() + 1);
+            }
+
+            keys.reverse().forEach(key => {
+                const option = document.createElement("option");
+                option.value = key;
+                option.textContent = monthLabel(key);
+                monthFilter.appendChild(option);
+            });
+
+            const saved =
+                sessionStorage.getItem("workout_month");
+
+            if (
+                saved &&
+                [...monthFilter.options].some(
+                    option => option.value === saved
+                )
+            ) {
+                monthFilter.value = saved;
+            }
+        }
+
+        function renderMonthlyChart(selectedKey, metric) {
+            const selectedDate = monthDateFromKey(selectedKey);
+            const months = [];
+
+            for (let offset = 5; offset >= 0; offset--) {
+                const date = new Date(
+                    selectedDate.getFullYear(),
+                    selectedDate.getMonth() - offset,
+                    1
+                );
+
+                const key = monthKey(date);
+                months.push({
+                    key,
+                    date,
+                    stats: statsForMonth(key)
+                });
+            }
+
+            const metricConfig = {
+                volume: {
+                    label: "Volumen",
+                    unit: "kg",
+                    value: item => item.stats.volume
+                },
+                workouts: {
+                    label: "Entrenamientos",
+                    unit: "",
+                    value: item => item.stats.workouts
+                },
+                sets: {
+                    label: "Series",
+                    unit: "",
+                    value: item => item.stats.sets
+                },
+                reps: {
+                    label: "Repeticiones",
+                    unit: "",
+                    value: item => item.stats.reps
+                }
+            };
+
+            const config = metricConfig[metric];
+            monthlyChartLabel.textContent = config.label;
+
+            const values = months.map(config.value);
+            const max = Math.max(...values, 1);
+
+            const width = 800;
+            const height = 300;
+            const padLeft = 58;
+            const padRight = 24;
+            const padTop = 24;
+            const padBottom = 55;
+
+            const chartW = width - padLeft - padRight;
+            const chartH = height - padTop - padBottom;
+
+            const x = index =>
+                padLeft +
+                (
+                    months.length === 1
+                        ? chartW / 2
+                        : index * chartW / (months.length - 1)
+                );
+
+            const y = value =>
+                padTop +
+                chartH -
+                (value / max) * chartH;
+
+            const points = months
+                .map((item, index) =>
+                    `${x(index)},${y(config.value(item))}`
+                )
+                .join(" ");
+
+            const marks = months.map((item, index) => {
+                const value = config.value(item);
+                const label =
+                    item.date
+                        .toLocaleDateString("es-MX", {
+                            month: "short"
+                        })
+                        .replace(".", "");
+
+                return `
+                    <circle
+                        cx="${x(index)}"
+                        cy="${y(value)}"
+                        r="5"
+                        fill="#00D4C6"
+                        stroke="#ffffff"
+                        stroke-width="2">
+                    </circle>
+
+                    <text
+                        x="${x(index)}"
+                        y="${y(value) - 12}"
+                        fill="#ffffff"
+                        text-anchor="middle"
+                        font-size="11"
+                        font-weight="700">
+                        ${value}
+                    </text>
+
+                    <text
+                        x="${x(index)}"
+                        y="${height - 18}"
+                        fill="rgba(255,255,255,.68)"
+                        text-anchor="middle"
+                        font-size="11">
+                        ${label}
+                    </text>
+                `;
+            }).join("");
+
+            monthlyChart.innerHTML = `
+                <svg
+                    viewBox="0 0 ${width} ${height}"
+                    role="img"
+                    aria-label="Evolución mensual">
+
+                    <line
+                        x1="${padLeft}"
+                        y1="${padTop}"
+                        x2="${padLeft}"
+                        y2="${height - padBottom}"
+                        stroke="rgba(255,255,255,.20)"
+                        stroke-width="1">
+                    </line>
+
+                    <line
+                        x1="${padLeft}"
+                        y1="${height - padBottom}"
+                        x2="${width - padRight}"
+                        y2="${height - padBottom}"
+                        stroke="rgba(255,255,255,.20)"
+                        stroke-width="1">
+                    </line>
+
+                    <text
+                        x="8"
+                        y="${padTop + 7}"
+                        fill="rgba(255,255,255,.68)"
+                        font-size="11">
+                        ${max} ${config.unit}
+                    </text>
+
+                    <text
+                        x="8"
+                        y="${height - padBottom}"
+                        fill="rgba(255,255,255,.68)"
+                        font-size="11">
+                        0 ${config.unit}
+                    </text>
+
+                    <polyline
+                        points="${points}"
+                        fill="none"
+                        stroke="#3C93FA"
+                        stroke-width="4"
+                        stroke-linejoin="round"
+                        stroke-linecap="round">
+                    </polyline>
+
+                    ${marks}
+                </svg>
+            `;
+        }
+
+        function renderMonthlyStatistics() {
+            const selectedKey = monthFilter.value;
+            const current = statsForMonth(selectedKey);
+            const previousKey = previousMonthKey(selectedKey);
+            const previous = statsForMonth(previousKey);
+
+            monthWorkouts.textContent = current.workouts;
+            monthExercises.textContent = current.exercises;
+            monthSets.textContent = current.sets;
+            monthReps.textContent = current.reps;
+            monthVolume.textContent = formatVolume(current.volume);
+            monthMaxWeight.textContent = `${current.maxWeight} kg`;
+
+            comparisonTitle.textContent =
+                `Vs. ${monthLabel(previousKey)}`;
+
+            compareWorkoutsValue.textContent = current.workouts;
+            compareSetsValue.textContent = current.sets;
+            compareRepsValue.textContent = current.reps;
+            compareVolumeValue.textContent = formatVolume(current.volume);
+
+            applyComparison(
+                compareWorkouts,
+                comparisonText(current.workouts, previous.workouts)
+            );
+
+            applyComparison(
+                compareSets,
+                comparisonText(current.sets, previous.sets)
+            );
+
+            applyComparison(
+                compareReps,
+                comparisonText(current.reps, previous.reps)
+            );
+
+            applyComparison(
+                compareVolume,
+                comparisonText(current.volume, previous.volume)
+            );
+
+            renderMonthlyChart(
+                selectedKey,
+                monthlyMetric.value
+            );
+        }
+
+        function renderActivityWeek() {
+            activityWeek.innerHTML = "";
+
+            const latest =
+                sessions.length
+                    ? new Date(
+                        Math.max(
+                            ...sessions.map(session =>
+                                new Date(session.startedAt).getTime()
+                            )
+                        )
+                    )
+                    : new Date();
+
+            latest.setHours(12, 0, 0, 0);
+
+            const sesionesPorFecha = new Map();
+
+            agrupadasGlobal.forEach(session => {
+                const key = session.fechaKey;
+                sesionesPorFecha.set(
+                    key,
+                    (sesionesPorFecha.get(key) || 0) + 1
+                );
+            });
+
+            const dias = [];
+
+            for (let offset = 6; offset >= 0; offset--) {
+                const date = new Date(latest);
+                date.setDate(latest.getDate() - offset);
+                dias.push(date);
+            }
+
+            dias.forEach(date => {
+                const key = keyFecha(date);
+                const count = sesionesPorFecha.get(key) || 0;
+
+                const wrapper = document.createElement("div");
+                wrapper.className =
+                    "activity-day" + (count ? " done" : "");
+
+                const dayName = date
+                    .toLocaleDateString("es-MX", { weekday: "short" })
+                    .replace(".", "");
+
+                wrapper.innerHTML = `
+                    <div class="activity-circle">
+                        ${count ? count : "—"}
+                    </div>
+                    <span>${dayName}</span>
+                    <strong>${date.getDate()}</strong>
+                `;
+
+                activityWeek.appendChild(wrapper);
+            });
+        }
+
+        function crearHistorialEjercicio(nombreEjercicio) {
+            const historial = [];
+
+            sessions.forEach(session => {
+                (session.exercises || []).forEach(exercise => {
+                    if (exercise.name === nombreEjercicio) {
+                        historial.push({
+                            fecha: new Date(session.startedAt),
+                            sets: Number(exercise.sets) || 0,
+                            reps: Number(exercise.reps) || 0,
+                            weightKg: Number(exercise.weightKg) || 0
+                        });
+                    }
+                });
+            });
+
+            historial.sort((a, b) => a.fecha - b.fecha);
+            return historial;
+        }
+
+        function mostrarProgreso(nombreEjercicio) {
+            if (!nombreEjercicio) {
+                progressResult.innerHTML = "";
+                summaryCurrent.textContent = "—";
+                summaryBest.textContent = "—";
+                summaryChange.textContent = "—";
+                progressChart.innerHTML =
+                    '<div class="chart-empty">Selecciona un ejercicio para comenzar a analizar su evolución.</div>';
+                return;
+            }
+
+            const historial = crearHistorialEjercicio(nombreEjercicio);
+
+            progressResult.innerHTML = historial
+                .slice(-4)
+                .reverse()
+                .map((registro, index, array) => {
+                    const fechaBase =
+                        registro.fecha.toLocaleDateString("es-MX");
+
+                    const sameDateCount =
+                        historial.filter(item =>
+                            item.fecha.toLocaleDateString("es-MX") === fechaBase
+                        ).length;
+
+                    const fecha =
+                        sameDateCount > 1
+                            ? `${fechaBase} · registro`
+                            : fechaBase;
+
+                    return `
+                        <div class="progress-entry">
+                            <strong>${fecha}</strong>
+                            ${registro.sets} series ×
+                            ${registro.reps} repeticiones
+                            · ${registro.weightKg} kg
+                        </div>
+                    `;
+                })
+                .join("");
+
+            actualizarResumen(historial, metricFilter.value);
+            mostrarGrafica(historial, metricFilter.value);
+        }
+
+        function actualizarResumen(historial, metrica) {
+            if (!historial.length) {
+                summaryCurrent.textContent = "—";
+                summaryBest.textContent = "—";
+                summaryChange.textContent = "—";
+                return;
+            }
+
+            const unidades = {
+                weightKg: " kg",
+                reps: " reps",
+                sets: " series"
+            };
+
+            const valores =
+                historial.map(item => Number(item[metrica]) || 0);
+
+            const actual = valores[valores.length - 1];
+            const mejor = Math.max(...valores);
+
+            summaryCurrent.textContent = actual + unidades[metrica];
+            summaryBest.textContent = mejor + unidades[metrica];
+
+            if (valores.length < 2) {
+                summaryChange.textContent = "—";
+            } else {
+                const anterior = valores[valores.length - 2];
+                const cambio = actual - anterior;
+                const signo = cambio > 0 ? "+" : "";
+
+                summaryChange.textContent =
+                    signo + cambio + unidades[metrica];
+            }
+        }
+
+        function mostrarGrafica(historial, metrica) {
+            if (!historial.length) {
+                progressChart.innerHTML =
+                    '<div class="chart-empty">No hay datos para este ejercicio.</div>';
+                return;
+            }
+
+            const etiquetas = {
+                weightKg: "kg",
+                reps: "reps",
+                sets: "series"
+            };
+
+            const valores =
+                historial.map(item => Number(item[metrica]) || 0);
+
+            const max = Math.max(...valores, 1);
+            const min = Math.min(...valores, 0);
+
+            const width = 900;
+            const height = 360;
+            const padLeft = 65;
+            const padRight = 30;
+            const padTop = 28;
+            const padBottom = 60;
+
+            const chartW = width - padLeft - padRight;
+            const chartH = height - padTop - padBottom;
+
+            const x = index => {
+                if (historial.length === 1) {
+                    return padLeft + chartW / 2;
+                }
+
+                return (
+                    padLeft +
+                    (index * chartW / (historial.length - 1))
+                );
+            };
+
+            const rango = Math.max(max - min, 1);
+
+            const y = valor =>
+                padTop +
+                chartH -
+                ((valor - min) / rango) * chartH;
+
+            const puntos = historial
+                .map(
+                    (item, index) =>
+                        `${x(index)},${y(Number(item[metrica]) || 0)}`
+                )
+                .join(" ");
+
+            const contadorFecha = {};
+
+            const marcas = historial.map((item, index) => {
+                const valor = Number(item[metrica]) || 0;
+
+                const fechaBase =
+                    item.fecha.toLocaleDateString("es-MX", {
+                        day: "2-digit",
+                        month: "2-digit"
+                    });
+
+                contadorFecha[fechaBase] =
+                    (contadorFecha[fechaBase] || 0) + 1;
+
+                const totalMismaFecha =
+                    historial.filter(other =>
+                        other.fecha.toLocaleDateString("es-MX", {
+                            day: "2-digit",
+                            month: "2-digit"
+                        }) === fechaBase
+                    ).length;
+
+                const fecha =
+                    totalMismaFecha > 1
+                        ? `${fechaBase} #${contadorFecha[fechaBase]}`
+                        : fechaBase;
+
+                return `
+                    <circle
+                        cx="${x(index)}"
+                        cy="${y(valor)}"
+                        r="6"
+                        fill="#00D4C6"
+                        stroke="#ffffff"
+                        stroke-width="2">
+                    </circle>
+
+                    <text
+                        x="${x(index)}"
+                        y="${y(valor) - 13}"
+                        fill="#ffffff"
+                        text-anchor="middle"
+                        font-size="12"
+                        font-weight="700">
+                        ${valor}
+                    </text>
+
+                    <text
+                        x="${x(index)}"
+                        y="${height - 22}"
+                        fill="rgba(255,255,255,.68)"
+                        text-anchor="middle"
+                        font-size="11">
+                        ${fecha}
+                    </text>
+                `;
+            }).join("");
+
+            progressChart.innerHTML = `
+                <svg
+                    viewBox="0 0 ${width} ${height}"
+                    role="img"
+                    aria-label="Gráfica de progreso">
+<line
+                        x1="${padLeft}"
+                        y1="${padTop}"
+                        x2="${padLeft}"
+                        y2="${height - padBottom}"
+                        stroke="rgba(255,255,255,.24)"
+                        stroke-width="1">
+                    </line>
+
+                    <line
+                        x1="${padLeft}"
+                        y1="${height - padBottom}"
+                        x2="${width - padRight}"
+                        y2="${height - padBottom}"
+                        stroke="rgba(255,255,255,.24)"
+                        stroke-width="1">
+                    </line>
+
+                    <text
+                        x="12"
+                        y="${padTop + 8}"
+                        fill="rgba(255,255,255,.68)"
+                        font-size="12">
+                        ${max} ${etiquetas[metrica]}
+                    </text>
+
+                    <text
+                        x="12"
+                        y="${height - padBottom}"
+                        fill="rgba(255,255,255,.68)"
+                        font-size="12">
+                        ${min} ${etiquetas[metrica]}
+                    </text>
+
+                    <polyline
+                        points="${puntos}"
+                        fill="none"
+                        stroke="#00D4C6"
+                        stroke-width="4"
+                        stroke-linejoin="round"
+                        stroke-linecap="round">
+                    </polyline>
+
+                    ${marcas}
+                </svg>
+            `;
+        }
+
+        function renderHistory(filtroSeleccionado) {
+            container.innerHTML = "";
+
+            const filtradas =
+                filtroSeleccionado === "Todos"
+                    ? sessions
+                    : sessions.filter(
+                        session =>
+                            session.activity === filtroSeleccionado
+                    );
+
+            const agrupadas =
+                agruparSesionesPorFechaYActividad(filtradas);
+
+            status.textContent =
+                `${agrupadas.length} entrenamiento(s) registrado(s)`;
+
+            agrupadas.forEach(session => {
+                const card = document.createElement("article");
+                card.className = "session";
+
+                const exercisesHTML =
+                    (session.exercises || [])
+                        .map(exercise => `
+                            <div class="exercise">
+                                <strong>${exercise.name}</strong>
+                                <span>
+                                    ${exercise.sets} series ×
+                                    ${exercise.reps} repeticiones
+                                    · ${exercise.weightKg} kg
+                                </span>
+                            </div>
+                        `)
+                        .join("");
+
+                card.innerHTML = `
+                    <div class="session-head">
+                        <div>
+                            <h3>${session.activity}</h3>
+                            <div class="meta">
+                                ${session.fechaObj.toLocaleDateString("es-MX")}
+                                ${session.intensity
+                                    ? ` · ${session.intensity}`
+                                    : ""}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="session-exercises">
+                        ${exercisesHTML}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        const sesionesPorDia = new Map();
+
+        agrupadasGlobal.forEach(session => {
+            const key = session.fechaKey;
+
+            if (!sesionesPorDia.has(key)) {
+                sesionesPorDia.set(key, []);
+            }
+
+            sesionesPorDia.get(key).push(session);
+        });
+
+        const fechaInicial =
+            sessions.length
+                ? new Date(
+                    Math.max(
+                        ...sessions.map(session =>
+                            new Date(session.startedAt).getTime()
+                        )
+                    )
+                )
+                : new Date();
+
+        let calendarioActual =
+            new Date(
+                fechaInicial.getFullYear(),
+                fechaInicial.getMonth(),
+                1
+            );
+
+        const mesGuardado =
+            sessionStorage.getItem("workout_calendar_month");
+
+        if (mesGuardado && /^\d{4}-\d{2}$/.test(mesGuardado)) {
+            const [yearGuardado, monthGuardado] =
+                mesGuardado.split("-").map(Number);
+
+            calendarioActual =
+                new Date(yearGuardado, monthGuardado - 1, 1);
+        }
+
+        function guardarMesCalendario() {
+            const y = calendarioActual.getFullYear();
+
+            const m =
+                String(
+                    calendarioActual.getMonth() + 1
+                ).padStart(2, "0");
+
+            sessionStorage.setItem(
+                "workout_calendar_month",
+                `${y}-${m}`
+            );
+        }
+
+        function mostrarDetalleDia(key) {
+            const delDia = sesionesPorDia.get(key) || [];
+
+            if (!delDia.length) {
+                calendarDetails.innerHTML =
+                    '<div class="meta">No hay entrenamientos registrados en este día.</div>';
+                return;
+            }
+
+            const fecha = new Date(key + "T12:00:00");
+
+            calendarDetails.innerHTML = `
+                <h3 class="calendar-detail-title">
+                    ${fecha.toLocaleDateString("es-MX", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric"
+                    })}
+                </h3>
+
+                ${delDia.map(session => `
+                    <article class="session">
+                        <div class="session-head">
+                            <div>
+                                <h3>${session.activity}</h3>
+                                <div class="meta">
+                                    ${session.intensity || ""}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="session-exercises">
+                            ${(session.exercises || [])
+                                .map(exercise => `
+                                    <div class="exercise">
+                                        <strong>${exercise.name}</strong>
+                                        <span>
+                                            ${exercise.sets} series ×
+                                            ${exercise.reps} repeticiones
+                                            · ${exercise.weightKg} kg
+                                        </span>
+                                    </div>
+                                `)
+                                .join("")}
+                        </div>
+                    </article>
+                `).join("")}
+            `;
+        }
+
+        function renderCalendario() {
+            calendarGrid.innerHTML = "";
+            calendarDetails.innerHTML = "";
+
+            const year = calendarioActual.getFullYear();
+            const month = calendarioActual.getMonth();
+
+            const nombreMes =
+                calendarioActual.toLocaleDateString("es-MX", {
+                    month: "long"
+                });
+
+            calendarTitle.textContent =
+                nombreMes.charAt(0).toUpperCase() +
+                nombreMes.slice(1) +
+                " de " +
+                year;
+
+            const firstDay =
+                new Date(year, month, 1).getDay();
+
+            const totalDays =
+                new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                const empty =
+                    document.createElement("div");
+
+                empty.className = "calendar-day empty";
+                calendarGrid.appendChild(empty);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const fecha = new Date(year, month, day);
+                const key = keyFecha(fecha);
+                const delDia = sesionesPorDia.get(key) || [];
+
+                const button =
+                    document.createElement("button");
+
+                button.type = "button";
+                button.className = "calendar-day";
+
+                if (delDia.length) {
+                    button.classList.add("has-workout");
+                }
+
+                button.innerHTML = `
+                    <span class="day-number">
+                        ${day}
+                    </span>
+
+                    ${delDia.length
+                        ? `
+                            <span class="workout-dot"></span>
+                            <span class="workout-count">
+                                ${delDia.length}
+                                entrenamiento${delDia.length === 1 ? "" : "s"}
+                            </span>
+                        `
+                        : ""
+                    }
+                `;
+
+                button.addEventListener("click", () => {
+                    document
+                        .querySelectorAll(".calendar-day.selected")
+                        .forEach(element =>
+                            element.classList.remove("selected")
+                        );
+
+                    button.classList.add("selected");
+                    mostrarDetalleDia(key);
+                });
+
+                calendarGrid.appendChild(button);
+            }
+        }
+
+
+        monthFilter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_month",
+                monthFilter.value
+            );
+
+            renderMonthlyStatistics();
+        });
+
+        monthlyMetric.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_monthly_metric",
+                monthlyMetric.value
+            );
+
+            renderMonthlyStatistics();
+        });
+
+        filter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_filter",
+                filter.value
+            );
+
+            renderHistory(filter.value);
+        });
+
+        exerciseFilter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_exercise",
+                exerciseFilter.value
+            );
+
+            mostrarProgreso(exerciseFilter.value);
+        });
+
+        metricFilter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_metric",
+                metricFilter.value
+            );
+
+            if (exerciseFilter.value) {
+                mostrarProgreso(exerciseFilter.value);
+            }
+        });
+
+        prevMonth.addEventListener("click", () => {
+            calendarioActual =
+                new Date(
+                    calendarioActual.getFullYear(),
+                    calendarioActual.getMonth() - 1,
+                    1
+                );
+
+            guardarMesCalendario();
+            renderCalendario();
+        });
+
+        nextMonth.addEventListener("click", () => {
+            calendarioActual =
+                new Date(
+                    calendarioActual.getFullYear(),
+                    calendarioActual.getMonth() + 1,
+                    1
+                );
+
+            guardarMesCalendario();
+            renderCalendario();
+        });
+
+        buildMonthOptions();
+
+        const savedMonthlyMetric =
+            sessionStorage.getItem("workout_monthly_metric");
+
+        if (
+            savedMonthlyMetric &&
+            [...monthlyMetric.options].some(
+                option => option.value === savedMonthlyMetric
+            )
+        ) {
+            monthlyMetric.value = savedMonthlyMetric;
+        }
+
+        renderOverview();
+        renderActivityWeek();
+        renderMonthlyStatistics();
+        renderHistory(filter.value);
+
+        if (exerciseFilter.value) {
+            mostrarProgreso(exerciseFilter.value);
+        }
+
+        renderCalendario();
+
+        const estadoInicial = JSON.stringify(sessions);
+
+        setInterval(async () => {
+            try {
+                const refreshResponse =
+                    await fetch("/api/sessions", {
+                        cache: "no-store"
+                    });
+
+                if (!refreshResponse.ok) {
+                    return;
+                }
+
+                const sesionesActualizadas =
+                    await refreshResponse.json();
+
+                const estadoActual =
+                    JSON.stringify(sesionesActualizadas);
+
+                if (estadoActual !== estadoInicial) {
+                    sessionStorage.setItem(
+                        "workout_filter",
+                        filter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_exercise",
+                        exerciseFilter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_metric",
+                        metricFilter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_month",
+                        monthFilter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_monthly_metric",
+                        monthlyMetric.value
+                    );
+
+                    guardarMesCalendario();
+
+                    window.location.reload();
+                }
+            } catch (refreshError) {
+                console.warn(
+                    "No se pudo comprobar si hay nuevos entrenamientos.",
+                    refreshError
+                );
+            }
+        }, AUTO_REFRESH_MS);
+
+    } catch(error) {
+        status.textContent =
+            "No se pudieron cargar los entrenamientos.";
+
+        console.error(error);
+    }
+}
+
+function activarNavegacionPorScroll() {
+    const links = [...document.querySelectorAll(".nav a")];
+
+    const secciones = links
+        .map(link => {
+            const id = link.getAttribute("href");
+            return {
+                link,
+                section: document.querySelector(id)
+            };
+        })
+        .filter(item => item.section);
+
+    function actualizar() {
+        const referencia = window.scrollY + window.innerHeight * 0.28;
+
+        let activa = secciones[0];
+
+        secciones.forEach(item => {
+            if (item.section.offsetTop <= referencia) {
+                activa = item;
+            }
+        });
+
+        links.forEach(link => link.classList.remove("active"));
+
+        if (activa) {
+            activa.link.classList.add("active");
+        }
     }
 
+    window.addEventListener("scroll", actualizar, { passive: true });
+    window.addEventListener("resize", actualizar);
+    actualizar();
+}
 
-def safe_int(value, default=0):
-    try:
-        return int(float(value or 0))
-    except (TypeError, ValueError):
-        return default
+activarNavegacionPorScroll();
 
+cargarEntrenamientos();
+</script>
 
-def safe_float(value, default=0.0):
-    try:
-        return float(value or 0)
-    except (TypeError, ValueError):
-        return default
-
-
-# ==========================================
-# SERVIDOR
-# ==========================================
-
-class Handler(SimpleHTTPRequestHandler):
-
-    def translate_path(self, path):
-        clean = urlparse(path).path.lstrip("/") or "index.html"
-        return str(PUBLIC_DIR / clean)
-
-    def send_json(self, status, payload):
-        body = json.dumps(
-            payload,
-            ensure_ascii=False,
-            indent=2
-        ).encode("utf-8")
-
-        self.send_response(status)
-        self.send_header(
-            "Content-Type",
-            "application/json; charset=utf-8"
-        )
-        self.send_header(
-            "Content-Length",
-            str(len(body))
-        )
-        self.send_header(
-            "Cache-Control",
-            "no-store"
-        )
-        self.end_headers()
-        self.wfile.write(body)
-
-    def read_json_body(self):
-        length = int(
-            self.headers.get(
-                "Content-Length",
-                "0"
-            )
-        )
-
-        raw = self.rfile.read(length)
-
-        return json.loads(
-            raw.decode("utf-8")
-        )
-
-    # ======================================
-    # GET
-    # ======================================
-
-    def do_GET(self):
-        path = urlparse(self.path).path
-
-        if path == "/api/health":
-            return self.send_json(
-                200,
-                {
-                    "ok": True,
-                    "message": "WorkoutLog funcionando",
-                    "database": (
-                        "postgresql"
-                        if is_postgres()
-                        else "sqlite"
-                    )
-                }
-            )
-
-        if path == "/api/sessions":
-            return self.get_sessions()
-
-        if path == "/api/stats":
-            return self.get_stats()
-
-        if path == "/":
-            self.path = "/index.html"
-
-        return super().do_GET()
-
-    # ======================================
-    # POST
-    # ======================================
-
-    def do_POST(self):
-        path = urlparse(self.path).path
-
-        if path == "/api/sessions":
-            return self.create_session()
-
-        if path == "/api/shortcut-workout":
-            return self.create_shortcut_workout()
-
-        return self.send_json(
-            404,
-            {
-                "ok": False,
-                "error": "Ruta no encontrada"
-            }
-        )
-
-    # ======================================
-    # OBTENER SESIONES
-    # ======================================
-
-    def get_sessions(self):
-        con = connect()
-
-        try:
-            sessions = con.execute("""
-                SELECT *
-                FROM sessions
-                ORDER BY started_at DESC
-            """).fetchall()
-
-            result = []
-            placeholder = sql_placeholder()
-
-            for session in sessions:
-                exercises = con.execute(
-                    f"""
-                    SELECT *
-                    FROM exercises
-                    WHERE session_id = {placeholder}
-                    """,
-                    (session["id"],)
-                ).fetchall()
-
-                result.append(
-                    session_to_dict(
-                        session,
-                        exercises
-                    )
-                )
-
-            return self.send_json(
-                200,
-                result
-            )
-
-        finally:
-            con.close()
-
-    # ======================================
-    # CREAR SESIÓN DESDE WEB
-    # ======================================
-
-    def create_session(self):
-        try:
-            body = self.read_json_body()
-
-        except Exception as exc:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "error": "JSON inválido",
-                    "detail": str(exc)
-                }
-            )
-
-        activity = str(
-            body.get(
-                "activity",
-                ""
-            )
-        ).strip()
-
-        intensity = str(
-            body.get(
-                "intensity",
-                "Moderada"
-            )
-        ).strip() or "Moderada"
-
-        notes = str(
-            body.get(
-                "notes",
-                ""
-            )
-        ).strip()
-
-        exercises = body.get(
-            "exercises",
-            []
-        )
-
-        total_duration = safe_int(
-            body.get(
-                "totalDurationMinutes",
-                0
-            )
-        )
-
-        if not activity:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "error": "Falta activity"
-                }
-            )
-
-        if not isinstance(
-            exercises,
-            list
-        ) or not exercises:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "error": "Faltan ejercicios"
-                }
-            )
-
-        return self.save_workout(
-            activity=activity,
-            exercises=exercises,
-            duration=total_duration,
-            intensity=intensity,
-            notes=notes
-        )
-
-    # ======================================
-    # ATAJO DE IPHONE
-    # ======================================
-
-    def create_shortcut_workout(self):
-        try:
-            body = self.read_json_body()
-            print(
-                "BODY RECIBIDO:",
-                body
-            )
-
-        except Exception as exc:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "message": "No pude leer los datos del iPhone.",
-                    "detail": str(exc)
-                }
-            )
-
-        # Formato esperado:
-        #
-        # {
-        #   "muscleGroup": "Espalda",
-        #   "exercises": [
-        #       {
-        #           "name": "Remo",
-        #           "sets": "5",
-        #           "reps": "4",
-        #           "weightKg": "4"
-        #       }
-        #   ]
-        # }
-
-        muscle_group = str(
-            body.get(
-                "muscleGroup",
-                body.get(
-                    "activity",
-                    ""
-                )
-            )
-        ).strip()
-
-        exercises = body.get(
-            "exercises",
-            []
-        )
-
-        intensity = str(
-            body.get(
-                "intensity",
-                "Moderada"
-            )
-        ).strip() or "Moderada"
-
-        notes = str(
-            body.get(
-                "notes",
-                ""
-            )
-        ).strip()
-
-        duration = safe_int(
-            body.get(
-                "durationMinutes",
-                body.get(
-                    "totalDurationMinutes",
-                    0
-                )
-            )
-        )
-
-        if not muscle_group:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "message": "Falta muscleGroup."
-                }
-            )
-
-        if not isinstance(
-            exercises,
-            list
-        ):
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "message": "exercises debe ser una lista."
-                }
-            )
-
-        if not exercises:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "message": "No hay ejercicios."
-                }
-            )
-
-        return self.save_workout(
-            activity=muscle_group,
-            exercises=exercises,
-            duration=duration,
-            intensity=intensity,
-            notes=notes
-        )
-
-    # ======================================
-    # GUARDAR ENTRENAMIENTO
-    # ======================================
-
-    def save_workout(
-        self,
-        activity,
-        exercises,
-        duration,
-        intensity,
-        notes
-    ):
-        session_id = str(
-            uuid.uuid4()
-        )
-
-        started_at = (
-            datetime
-            .now(timezone.utc)
-            .isoformat()
-            .replace(
-                "+00:00",
-                "Z"
-            )
-        )
-
-        con = connect()
-        placeholder = sql_placeholder()
-
-        try:
-            con.execute(
-                f"""
-                INSERT INTO sessions
-                (
-                    id,
-                    activity,
-                    started_at,
-                    total_duration_minutes,
-                    intensity,
-                    notes
-                )
-                VALUES (
-                    {placeholder},
-                    {placeholder},
-                    {placeholder},
-                    {placeholder},
-                    {placeholder},
-                    {placeholder}
-                )
-                """,
-                (
-                    session_id,
-                    activity,
-                    started_at,
-                    max(
-                        0,
-                        duration
-                    ),
-                    intensity,
-                    notes
-                )
-            )
-
-            saved_count = 0
-
-            for exercise in exercises:
-                if not isinstance(
-                    exercise,
-                    dict
-                ):
-                    continue
-
-                name = str(
-                    exercise.get(
-                        "name",
-                        ""
-                    )
-                ).strip()
-
-                if not name:
-                    continue
-
-                sets = max(
-                    0,
-                    safe_int(
-                        exercise.get(
-                            "sets",
-                            0
-                        )
-                    )
-                )
-
-                reps = max(
-                    0,
-                    safe_int(
-                        exercise.get(
-                            "reps",
-                            0
-                        )
-                    )
-                )
-
-                weight = max(
-                    0.0,
-                    safe_float(
-                        exercise.get(
-                            "weightKg",
-                            0
-                        )
-                    )
-                )
-
-                exercise_duration = max(
-                    0,
-                    safe_int(
-                        exercise.get(
-                            "durationMinutes",
-                            0
-                        )
-                    )
-                )
-
-                con.execute(
-                    f"""
-                    INSERT INTO exercises
-                    (
-                        id,
-                        session_id,
-                        name,
-                        sets,
-                        reps,
-                        weight_kg,
-                        duration_minutes
-                    )
-                    VALUES (
-                        {placeholder},
-                        {placeholder},
-                        {placeholder},
-                        {placeholder},
-                        {placeholder},
-                        {placeholder},
-                        {placeholder}
-                    )
-                    """,
-                    (
-                        str(
-                            uuid.uuid4()
-                        ),
-                        session_id,
-                        name,
-                        sets,
-                        reps,
-                        weight,
-                        exercise_duration
-                    )
-                )
-
-                saved_count += 1
-
-            if saved_count == 0:
-                con.rollback()
-
-                return self.send_json(
-                    400,
-                    {
-                        "ok": False,
-                        "message": "No encontré ejercicios válidos."
-                    }
-                )
-
-            con.commit()
-
-            session = con.execute(
-                f"""
-                SELECT *
-                FROM sessions
-                WHERE id = {placeholder}
-                """,
-                (
-                    session_id,
-                )
-            ).fetchone()
-
-            exercise_rows = con.execute(
-                f"""
-                SELECT *
-                FROM exercises
-                WHERE session_id = {placeholder}
-                """,
-                (
-                    session_id,
-                )
-            ).fetchall()
-
-            result = session_to_dict(
-                session,
-                exercise_rows
-            )
-
-            return self.send_json(
-                201,
-                {
-                    "ok": True,
-                    "message": "Entrenamiento guardado.",
-                    "session": result
-                }
-            )
-
-        except Exception as exc:
-            con.rollback()
-
-            print(
-                "ERROR AL GUARDAR:",
-                repr(exc)
-            )
-
-            return self.send_json(
-                500,
-                {
-                    "ok": False,
-                    "message": "Error al guardar el entrenamiento.",
-                    "detail": str(exc)
-                }
-            )
-
-        finally:
-            con.close()
-
-    # ======================================
-    # ESTADÍSTICAS
-    # ======================================
-
-    def get_stats(self):
-        con = connect()
-
-        try:
-            rows = con.execute("""
-                SELECT
-                    activity,
-                    started_at,
-                    total_duration_minutes
-                FROM sessions
-            """).fetchall()
-
-        finally:
-            con.close()
-
-        now = datetime.now(
-            timezone.utc
-        )
-
-        week_start = (
-            now
-            - timedelta(
-                days=now.weekday()
-            )
-        ).replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0
-        )
-
-        month_start = now.replace(
-            day=1,
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0
-        )
-
-        week_sessions = 0
-        week_minutes = 0
-
-        month_sessions = 0
-        month_minutes = 0
-
-        counts = {}
-
-        for row in rows:
-            activity = row["activity"]
-
-            counts[activity] = (
-                counts.get(
-                    activity,
-                    0
-                )
-                + 1
-            )
-
-            try:
-                dt = datetime.fromisoformat(
-                    row["started_at"]
-                    .replace(
-                        "Z",
-                        "+00:00"
-                    )
-                )
-
-            except Exception:
-                continue
-
-            if dt >= week_start:
-                week_sessions += 1
-                week_minutes += (
-                    row[
-                        "total_duration_minutes"
-                    ]
-                )
-
-            if dt >= month_start:
-                month_sessions += 1
-                month_minutes += (
-                    row[
-                        "total_duration_minutes"
-                    ]
-                )
-
-        top_activity = (
-            max(
-                counts,
-                key=counts.get
-            )
-            if counts
-            else None
-        )
-
-        return self.send_json(
-            200,
-            {
-                "totalSessions": len(rows),
-
-                "totalMinutes": sum(
-                    row[
-                        "total_duration_minutes"
-                    ]
-                    for row in rows
-                ),
-
-                "thisWeekSessions":
-                    week_sessions,
-
-                "thisWeekMinutes":
-                    week_minutes,
-
-                "thisMonthSessions":
-                    month_sessions,
-
-                "thisMonthMinutes":
-                    month_minutes,
-
-                "topActivity":
-                    top_activity
-            }
-        )
-
-
-# ==========================================
-# INICIAR
-# ==========================================
-
-if __name__ == "__main__":
-    init_db()
-
-    server = ThreadingHTTPServer(
-        (
-            "0.0.0.0",
-            PORT
-        ),
-        Handler
-    )
-
-    print("")
-    print("==============================")
-    print(" WorkoutLog funcionando")
-    print("==============================")
-    print(
-        f"http://localhost:{PORT}"
-    )
-    print("==============================")
-    print("")
-
-    server.serve_forever()
+</body>
+</html>
