@@ -76,6 +76,7 @@ def init_db():
                         reps INTEGER NOT NULL DEFAULT 0,
                         weight_kg REAL NOT NULL DEFAULT 0,
                         duration_minutes INTEGER NOT NULL DEFAULT 0,
+                        muscle_group TEXT NOT NULL DEFAULT '',
 
                         FOREIGN KEY (session_id)
                         REFERENCES sessions(id)
@@ -101,12 +102,28 @@ def init_db():
                     reps INTEGER NOT NULL DEFAULT 0,
                     weight_kg REAL NOT NULL DEFAULT 0,
                     duration_minutes INTEGER NOT NULL DEFAULT 0,
+                    muscle_group TEXT NOT NULL DEFAULT '',
 
                     FOREIGN KEY (session_id)
                     REFERENCES sessions(id)
                     ON DELETE CASCADE
                 );
             """)
+
+        if is_postgres():
+            with con.cursor() as cur:
+                cur.execute("""
+                    ALTER TABLE exercises
+                    ADD COLUMN IF NOT EXISTS muscle_group TEXT NOT NULL DEFAULT ''
+                """)
+        else:
+            columns = con.execute("PRAGMA table_info(exercises)").fetchall()
+            column_names = [row["name"] for row in columns]
+            if "muscle_group" not in column_names:
+                con.execute("""
+                    ALTER TABLE exercises
+                    ADD COLUMN muscle_group TEXT NOT NULL DEFAULT ''
+                """)
 
         con.commit()
 
@@ -133,7 +150,8 @@ def session_to_dict(session_row, exercise_rows):
                 "sets": row["sets"],
                 "reps": row["reps"],
                 "weightKg": row["weight_kg"],
-                "durationMinutes": row["duration_minutes"]
+                "durationMinutes": row["duration_minutes"],
+                "muscleGroup": row["muscle_group"]
             }
             for row in exercise_rows
         ]
@@ -401,26 +419,16 @@ class Handler(SimpleHTTPRequestHandler):
         # Formato esperado:
         #
         # {
-        #   "muscleGroup": "Espalda",
         #   "exercises": [
         #       {
         #           "name": "Remo",
         #           "sets": "5",
         #           "reps": "4",
-        #           "weightKg": "4"
+        #           "weightKg": "4",
+        #           "muscleGroup": "Espalda"
         #       }
         #   ]
         # }
-
-        muscle_group = str(
-            body.get(
-                "muscleGroup",
-                body.get(
-                    "activity",
-                    ""
-                )
-            )
-        ).strip()
 
         exercises = body.get(
             "exercises",
@@ -451,15 +459,6 @@ class Handler(SimpleHTTPRequestHandler):
             )
         )
 
-        if not muscle_group:
-            return self.send_json(
-                400,
-                {
-                    "ok": False,
-                    "message": "Falta muscleGroup."
-                }
-            )
-
         if not isinstance(
             exercises,
             list
@@ -481,8 +480,22 @@ class Handler(SimpleHTTPRequestHandler):
                 }
             )
 
+        groups = []
+        for exercise in exercises:
+            if isinstance(exercise, dict):
+                group = str(exercise.get("muscleGroup", "")).strip()
+                if group and group not in groups:
+                    groups.append(group)
+
+        if len(groups) == 1:
+            activity = groups[0]
+        elif len(groups) > 1:
+            activity = "Mixto"
+        else:
+            activity = str(body.get("activity", "Entrenamiento")).strip() or "Entrenamiento"
+
         return self.save_workout(
-            activity=muscle_group,
+            activity=activity,
             exercises=exercises,
             duration=duration,
             intensity=intensity,
@@ -611,6 +624,13 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                 )
 
+                muscle_group = str(
+                    exercise.get(
+                        "muscleGroup",
+                        activity
+                    )
+                ).strip() or activity
+
                 con.execute(
                     f"""
                     INSERT INTO exercises
@@ -621,9 +641,11 @@ class Handler(SimpleHTTPRequestHandler):
                         sets,
                         reps,
                         weight_kg,
-                        duration_minutes
+                        duration_minutes,
+                        muscle_group
                     )
                     VALUES (
+                        {placeholder},
                         {placeholder},
                         {placeholder},
                         {placeholder},
@@ -642,7 +664,8 @@ class Handler(SimpleHTTPRequestHandler):
                         sets,
                         reps,
                         weight,
-                        exercise_duration
+                        exercise_duration,
+                        muscle_group
                     )
                 )
 
