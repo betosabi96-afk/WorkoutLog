@@ -2241,6 +2241,35 @@ async function cargarEntrenamientos() {
             `;
         }
 
+        function formatearMetricasHistorial(exercise) {
+            const esCardio = String(exercise.muscleGroup || "").trim().toLowerCase() === "cardio";
+            const numeroValido = valor => valor !== null && valor !== undefined && valor !== "" && Number.isFinite(Number(valor)) && Number(valor) > 0;
+            const formato = valor => Number(valor).toLocaleString("es-MX", { maximumFractionDigits: 2 });
+
+            if (esCardio) {
+                const detalles = [];
+                if (numeroValido(exercise.durationMinutes)) {
+                    detalles.push(`${formato(exercise.durationMinutes)} min`);
+                }
+                if (numeroValido(exercise.distanceKm)) {
+                    detalles.push(`${formato(exercise.distanceKm)} km`);
+                }
+                return detalles.join(" · ") || "Sin métricas registradas";
+            }
+
+            const detalles = [];
+            if (numeroValido(exercise.sets) && numeroValido(exercise.reps)) {
+                detalles.push(`${formato(exercise.sets)} series × ${formato(exercise.reps)} repeticiones`);
+            } else {
+                if (numeroValido(exercise.sets)) detalles.push(`${formato(exercise.sets)} series`);
+                if (numeroValido(exercise.reps)) detalles.push(`${formato(exercise.reps)} repeticiones`);
+            }
+            if (numeroValido(exercise.weightKg)) {
+                detalles.push(`${formato(exercise.weightKg)} kg`);
+            }
+            return detalles.join(" · ") || "Sin métricas registradas";
+        }
+
         function renderHistory(filtroSeleccionado) {
             container.innerHTML = "";
 
@@ -2267,11 +2296,7 @@ async function cargarEntrenamientos() {
                         .map(exercise => `
                             <div class="exercise">
                                 <strong>${exercise.name}</strong>
-                                <span>
-                                    ${exercise.sets} series ×
-                                    ${exercise.reps} repeticiones
-                                    · ${exercise.weightKg} kg
-                                </span>
+                                <span>${formatearMetricasHistorial(exercise)}</span>
                             </div>
                         `)
                         .join("");
