@@ -76,6 +76,7 @@ def init_db():
                         reps INTEGER NOT NULL DEFAULT 0,
                         weight_kg REAL NOT NULL DEFAULT 0,
                         duration_minutes INTEGER NOT NULL DEFAULT 0,
+                        distance_km REAL NOT NULL DEFAULT 0,
                         muscle_group TEXT NOT NULL DEFAULT '',
 
                         FOREIGN KEY (session_id)
@@ -102,6 +103,7 @@ def init_db():
                     reps INTEGER NOT NULL DEFAULT 0,
                     weight_kg REAL NOT NULL DEFAULT 0,
                     duration_minutes INTEGER NOT NULL DEFAULT 0,
+                    distance_km REAL NOT NULL DEFAULT 0,
                     muscle_group TEXT NOT NULL DEFAULT '',
 
                     FOREIGN KEY (session_id)
@@ -116,13 +118,25 @@ def init_db():
                     ALTER TABLE exercises
                     ADD COLUMN IF NOT EXISTS muscle_group TEXT NOT NULL DEFAULT ''
                 """)
+
+                cur.execute("""
+                    ALTER TABLE exercises
+                    ADD COLUMN IF NOT EXISTS distance_km REAL NOT NULL DEFAULT 0
+                """)
         else:
             columns = con.execute("PRAGMA table_info(exercises)").fetchall()
             column_names = [row["name"] for row in columns]
+
             if "muscle_group" not in column_names:
                 con.execute("""
                     ALTER TABLE exercises
                     ADD COLUMN muscle_group TEXT NOT NULL DEFAULT ''
+                """)
+
+            if "distance_km" not in column_names:
+                con.execute("""
+                    ALTER TABLE exercises
+                    ADD COLUMN distance_km REAL NOT NULL DEFAULT 0
                 """)
 
         con.commit()
@@ -151,6 +165,7 @@ def session_to_dict(session_row, exercise_rows):
                 "reps": row["reps"],
                 "weightKg": row["weight_kg"],
                 "durationMinutes": row["duration_minutes"],
+                "distanceKm": row["distance_km"],
                 "muscleGroup": row["muscle_group"]
             }
             for row in exercise_rows
@@ -219,10 +234,6 @@ class Handler(SimpleHTTPRequestHandler):
             raw.decode("utf-8")
         )
 
-    # ======================================
-    # GET
-    # ======================================
-
     def do_GET(self):
         path = urlparse(self.path).path
 
@@ -251,10 +262,6 @@ class Handler(SimpleHTTPRequestHandler):
 
         return super().do_GET()
 
-    # ======================================
-    # POST
-    # ======================================
-
     def do_POST(self):
         path = urlparse(self.path).path
 
@@ -271,10 +278,6 @@ class Handler(SimpleHTTPRequestHandler):
                 "error": "Ruta no encontrada"
             }
         )
-
-    # ======================================
-    # OBTENER SESIONES
-    # ======================================
 
     def get_sessions(self):
         con = connect()
@@ -313,10 +316,6 @@ class Handler(SimpleHTTPRequestHandler):
 
         finally:
             con.close()
-
-    # ======================================
-    # CREAR SESIÓN DESDE WEB
-    # ======================================
 
     def create_session(self):
         try:
@@ -394,10 +393,6 @@ class Handler(SimpleHTTPRequestHandler):
             notes=notes
         )
 
-    # ======================================
-    # ATAJO DE IPHONE
-    # ======================================
-
     def create_shortcut_workout(self):
         try:
             body = self.read_json_body()
@@ -415,20 +410,6 @@ class Handler(SimpleHTTPRequestHandler):
                     "detail": str(exc)
                 }
             )
-
-        # Formato esperado:
-        #
-        # {
-        #   "exercises": [
-        #       {
-        #           "name": "Remo",
-        #           "sets": "5",
-        #           "reps": "4",
-        #           "weightKg": "4",
-        #           "muscleGroup": "Espalda"
-        #       }
-        #   ]
-        # }
 
         exercises = body.get(
             "exercises",
@@ -494,6 +475,21 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             activity = str(body.get("activity", "Entrenamiento")).strip() or "Entrenamiento"
 
+        if duration == 0:
+            duration = sum(
+                max(
+                    0,
+                    safe_int(
+                        exercise.get(
+                            "durationMinutes",
+                            0
+                        )
+                    )
+                )
+                for exercise in exercises
+                if isinstance(exercise, dict)
+            )
+
         return self.save_workout(
             activity=activity,
             exercises=exercises,
@@ -501,10 +497,6 @@ class Handler(SimpleHTTPRequestHandler):
             intensity=intensity,
             notes=notes
         )
-
-    # ======================================
-    # GUARDAR ENTRENAMIENTO
-    # ======================================
 
     def save_workout(
         self,
@@ -624,6 +616,16 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                 )
 
+                exercise_distance = max(
+                    0.0,
+                    safe_float(
+                        exercise.get(
+                            "distanceKm",
+                            0
+                        )
+                    )
+                )
+
                 muscle_group = str(
                     exercise.get(
                         "muscleGroup",
@@ -642,9 +644,11 @@ class Handler(SimpleHTTPRequestHandler):
                         reps,
                         weight_kg,
                         duration_minutes,
+                        distance_km,
                         muscle_group
                     )
                     VALUES (
+                        {placeholder},
                         {placeholder},
                         {placeholder},
                         {placeholder},
@@ -665,6 +669,7 @@ class Handler(SimpleHTTPRequestHandler):
                         reps,
                         weight,
                         exercise_duration,
+                        exercise_distance,
                         muscle_group
                     )
                 )
@@ -739,10 +744,6 @@ class Handler(SimpleHTTPRequestHandler):
 
         finally:
             con.close()
-
-    # ======================================
-    # ESTADÍSTICAS
-    # ======================================
 
     def get_stats(self):
         con = connect()
@@ -843,35 +844,20 @@ class Handler(SimpleHTTPRequestHandler):
             200,
             {
                 "totalSessions": len(rows),
-
                 "totalMinutes": sum(
                     row[
                         "total_duration_minutes"
                     ]
                     for row in rows
                 ),
-
-                "thisWeekSessions":
-                    week_sessions,
-
-                "thisWeekMinutes":
-                    week_minutes,
-
-                "thisMonthSessions":
-                    month_sessions,
-
-                "thisMonthMinutes":
-                    month_minutes,
-
-                "topActivity":
-                    top_activity
+                "thisWeekSessions": week_sessions,
+                "thisWeekMinutes": week_minutes,
+                "thisMonthSessions": month_sessions,
+                "thisMonthMinutes": month_minutes,
+                "topActivity": top_activity
             }
         )
 
-
-# ==========================================
-# INICIAR
-# ==========================================
 
 if __name__ == "__main__":
     init_db()
