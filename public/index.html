@@ -259,6 +259,22 @@
             margin-top: 8px;
         }
 
+        .cardio-overview {
+            margin-bottom: 18px;
+        }
+        .cardio-stats-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .cardio-stat-card {
+            padding: 18px;
+            min-height: 132px;
+            background: #32475B;
+            box-shadow: none;
+        }
+        .cardio-stat-card .stat-label { margin-bottom: 14px; }
+        .cardio-stat-card .stat-value { font-size: clamp(22px, 2.3vw, 31px); }
+        .cardio-hint { color: var(--text-label); font-size: 12px; margin: 14px 0 0; }
+
         .dashboard-grid {
             grid-template-columns: 1.05fr 1.95fr;
             margin-bottom: 18px;
@@ -876,8 +892,9 @@
                 padding: 28px 24px 50px;
             }
 
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .stats-grid,
+            .cardio-stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .dashboard-grid,
@@ -938,6 +955,9 @@
             .stats-grid {
                 grid-template-columns: 1fr 1fr;
             }
+
+            .cardio-stat-card { padding: 14px; min-height: 120px; }
+            .cardio-stat-card .stat-value { font-size: 23px; }
 
             .monthly-toolbar {
                 display: grid;
@@ -1046,6 +1066,38 @@
                     <div class="stat-value" id="statVolume">—</div>
                     <div class="stat-sub">series × reps × kg</div>
                 </article>
+            </section>
+
+            <section class="card section-card cardio-overview" aria-labelledby="cardioOverviewTitle">
+                <div class="section-head">
+                    <div>
+                        <h2 id="cardioOverviewTitle">Resumen de Cardio</h2>
+                        <p>Distancia, tiempo y ritmo calculados con tus entrenamientos registrados.</p>
+                    </div>
+                </div>
+                <div class="grid cardio-stats-grid">
+                    <article class="card cardio-stat-card">
+                        <div class="stat-label">Distancia acumulada</div>
+                        <div class="stat-value" id="cardioTotalDistance">—</div>
+                        <div class="stat-sub">km registrados en Cardio</div>
+                    </article>
+                    <article class="card cardio-stat-card">
+                        <div class="stat-label">Tiempo acumulado</div>
+                        <div class="stat-value" id="cardioTotalMinutes">—</div>
+                        <div class="stat-sub">minutos registrados en Cardio</div>
+                    </article>
+                    <article class="card cardio-stat-card">
+                        <div class="stat-label">Sesiones de Cardio</div>
+                        <div class="stat-value" id="cardioTotalSessions">—</div>
+                        <div class="stat-sub">sesiones con al menos un ejercicio Cardio</div>
+                    </article>
+                    <article class="card cardio-stat-card">
+                        <div class="stat-label">Ritmo de carrera</div>
+                        <div class="stat-value" id="cardioRunningPace">—</div>
+                        <div class="stat-sub">min/km · solo Correr con tiempo y distancia</div>
+                    </article>
+                </div>
+                <p class="cardio-hint">El ritmo se calcula automáticamente: minutos totales ÷ kilómetros totales. Las mediciones faltantes no se interpretan como cero.</p>
             </section>
 
             <section class="grid dashboard-grid">
@@ -1557,6 +1609,50 @@ async function cargarEntrenamientos() {
             overviewTopGroup.textContent = topGroup;
         }
 
+
+        function renderCardioOverview() {
+            let distance = 0;
+            let minutes = 0;
+            let runningMinutes = 0;
+            let runningDistance = 0;
+            let cardioSessions = 0;
+
+            const valido = valor => valor !== null && valor !== undefined &&
+                valor !== "" && Number.isFinite(Number(valor)) && Number(valor) > 0;
+
+            sessions.forEach(session => {
+                let tieneCardio = false;
+                (session.exercises || []).forEach(exercise => {
+                    if (grupoDeEjercicio(exercise, session).toLowerCase() !== "cardio") return;
+                    tieneCardio = true;
+                    const durationValid = valido(exercise.durationMinutes);
+                    const distanceValid = valido(exercise.distanceKm);
+                    if (durationValid) minutes += Number(exercise.durationMinutes);
+                    if (distanceValid) distance += Number(exercise.distanceKm);
+
+                    // Para el ritmo de carrera no se incluyen bicicleta, remo u otros deportes.
+                    // Exigimos ambas mediciones válidas del MISMO registro.
+                    if (String(exercise.name || "").trim().toLowerCase() === "correr" &&
+                        durationValid && distanceValid) {
+                        runningMinutes += Number(exercise.durationMinutes);
+                        runningDistance += Number(exercise.distanceKm);
+                    }
+                });
+                if (tieneCardio) cardioSessions++;
+            });
+
+            const numero = value => Number(value.toFixed(2)).toLocaleString("es-MX", {maximumFractionDigits: 2});
+            document.getElementById("cardioTotalDistance").textContent = `${numero(distance)} km`;
+            document.getElementById("cardioTotalMinutes").textContent = `${numero(minutes)} min`;
+            document.getElementById("cardioTotalSessions").textContent = cardioSessions;
+
+            let pace = "—";
+            if (runningDistance > 0) {
+                const totalSecondsPerKm = Math.round(runningMinutes * 60 / runningDistance);
+                pace = `${Math.floor(totalSecondsPerKm / 60)}:${String(totalSecondsPerKm % 60).padStart(2, "0")} min/km`;
+            }
+            document.getElementById("cardioRunningPace").textContent = pace;
+        }
 
         function monthKey(date) {
             const y = date.getFullYear();
@@ -2645,6 +2741,7 @@ async function cargarEntrenamientos() {
         }
 
         renderOverview();
+        renderCardioOverview();
         renderActivityWeek();
         renderMonthlyStatistics();
         renderHistory(filter.value);
