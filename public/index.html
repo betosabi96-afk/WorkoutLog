@@ -2073,8 +2073,18 @@ async function cargarEntrenamientos() {
                     `;
                 }).join("");
 
-            actualizarResumen(historial, metricFilter.value);
-            mostrarGrafica(historial, metricFilter.value);
+            // En Cardio, 0 puede representar un dato no registrado.
+            // Se excluye únicamente de los cálculos de la métrica seleccionada,
+            // sin borrar el entrenamiento ni alterar los registros de Fuerza.
+            const historialMetrica = esCardio
+                ? historial.filter(registro =>
+                    Number.isFinite(Number(registro[metricFilter.value])) &&
+                    Number(registro[metricFilter.value]) > 0
+                )
+                : historial;
+
+            actualizarResumen(historialMetrica, metricFilter.value);
+            mostrarGrafica(historialMetrica, metricFilter.value);
         }
 
         function actualizarResumen(historial, metrica) {
@@ -2117,7 +2127,7 @@ async function cargarEntrenamientos() {
         function mostrarGrafica(historial, metrica) {
             if (!historial.length) {
                 progressChart.innerHTML =
-                    '<div class="chart-empty">No hay datos para este ejercicio.</div>';
+                    '<div class="chart-empty">No hay registros válidos para esta métrica.</div>';
                 return;
             }
 
