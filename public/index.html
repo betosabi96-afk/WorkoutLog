@@ -2681,4 +2681,194 @@ async function cargarEntrenamientos() {
                 monthlyMetric.value
             );
 
-            renderMonthlySt
+            renderMonthlyStatistics();
+        });
+
+        filter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_filter",
+                filter.value
+            );
+
+            renderHistory(filter.value);
+        });
+
+        exerciseFilter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_exercise",
+                exerciseFilter.value
+            );
+
+            configurarMetricasProgreso();
+            mostrarProgreso(exerciseFilter.value);
+        });
+
+        metricFilter.addEventListener("change", () => {
+            sessionStorage.setItem(
+                "workout_metric",
+                metricFilter.value
+            );
+
+            if (exerciseFilter.value) {
+                mostrarProgreso(exerciseFilter.value);
+            }
+        });
+
+        prevMonth.addEventListener("click", () => {
+            calendarioActual =
+                new Date(
+                    calendarioActual.getFullYear(),
+                    calendarioActual.getMonth() - 1,
+                    1
+                );
+
+            guardarMesCalendario();
+            renderCalendario();
+        });
+
+        nextMonth.addEventListener("click", () => {
+            calendarioActual =
+                new Date(
+                    calendarioActual.getFullYear(),
+                    calendarioActual.getMonth() + 1,
+                    1
+                );
+
+            guardarMesCalendario();
+            renderCalendario();
+        });
+
+        buildMonthOptions();
+
+        const savedMonthlyMetric =
+            sessionStorage.getItem("workout_monthly_metric");
+
+        if (
+            savedMonthlyMetric &&
+            [...monthlyMetric.options].some(
+                option => option.value === savedMonthlyMetric
+            )
+        ) {
+            monthlyMetric.value = savedMonthlyMetric;
+        }
+
+        renderOverview();
+        renderCardioOverview();
+        renderActivityWeek();
+        renderMonthlyStatistics();
+        renderHistory(filter.value);
+
+        if (exerciseFilter.value) {
+            mostrarProgreso(exerciseFilter.value);
+        }
+
+        renderCalendario();
+
+        const estadoInicial = JSON.stringify(sessions);
+
+        setInterval(async () => {
+            try {
+                const refreshResponse =
+                    await fetch("/api/sessions", {
+                        cache: "no-store"
+                    });
+
+                if (!refreshResponse.ok) {
+                    return;
+                }
+
+                const sesionesActualizadas =
+                    await refreshResponse.json();
+
+                const estadoActual =
+                    JSON.stringify(sesionesActualizadas);
+
+                if (estadoActual !== estadoInicial) {
+                    sessionStorage.setItem(
+                        "workout_filter",
+                        filter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_exercise",
+                        exerciseFilter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_metric",
+                        metricFilter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_month",
+                        monthFilter.value
+                    );
+
+                    sessionStorage.setItem(
+                        "workout_monthly_metric",
+                        monthlyMetric.value
+                    );
+
+                    guardarMesCalendario();
+
+                    window.location.reload();
+                }
+            } catch (refreshError) {
+                console.warn(
+                    "No se pudo comprobar si hay nuevos entrenamientos.",
+                    refreshError
+                );
+            }
+        }, AUTO_REFRESH_MS);
+
+    } catch(error) {
+        status.textContent =
+            "No se pudieron cargar los entrenamientos.";
+
+        console.error(error);
+    }
+}
+
+function activarNavegacionPorScroll() {
+    const links = [...document.querySelectorAll(".nav a")];
+
+    const secciones = links
+        .map(link => {
+            const id = link.getAttribute("href");
+            return {
+                link,
+                section: document.querySelector(id)
+            };
+        })
+        .filter(item => item.section);
+
+    function actualizar() {
+        const referencia = window.scrollY + window.innerHeight * 0.28;
+
+        let activa = secciones[0];
+
+        secciones.forEach(item => {
+            if (item.section.offsetTop <= referencia) {
+                activa = item;
+            }
+        });
+
+        links.forEach(link => link.classList.remove("active"));
+
+        if (activa) {
+            activa.link.classList.add("active");
+        }
+    }
+
+    window.addEventListener("scroll", actualizar, { passive: true });
+    window.addEventListener("resize", actualizar);
+    actualizar();
+}
+
+activarNavegacionPorScroll();
+
+cargarEntrenamientos();
+</script>
+
+</body>
+</html>
