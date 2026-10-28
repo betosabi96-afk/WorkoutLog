@@ -260,10 +260,13 @@
         }
 
         .cardio-overview {
-            margin-bottom: 18px;
+            margin-top: 18px;
+            margin-bottom: 0;
+            box-shadow: none;
         }
+        .cardio-overview[hidden] { display: none !important; }
         .cardio-stats-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .cardio-stat-card {
             padding: 18px;
@@ -272,7 +275,7 @@
             box-shadow: none;
         }
         .cardio-stat-card .stat-label { margin-bottom: 14px; }
-        .cardio-stat-card .stat-value { font-size: clamp(22px, 2.3vw, 31px); }
+        .cardio-stat-card .stat-value { font-size: clamp(20px, 2vw, 28px); overflow-wrap: anywhere; }
         .cardio-hint { color: var(--text-label); font-size: 12px; margin: 14px 0 0; }
 
         .dashboard-grid {
@@ -1068,38 +1071,6 @@
                 </article>
             </section>
 
-            <section class="card section-card cardio-overview" aria-labelledby="cardioOverviewTitle">
-                <div class="section-head">
-                    <div>
-                        <h2 id="cardioOverviewTitle">Resumen de Cardio</h2>
-                        <p>Distancia, tiempo y ritmo calculados con tus entrenamientos registrados.</p>
-                    </div>
-                </div>
-                <div class="grid cardio-stats-grid">
-                    <article class="card cardio-stat-card">
-                        <div class="stat-label">Distancia acumulada</div>
-                        <div class="stat-value" id="cardioTotalDistance">—</div>
-                        <div class="stat-sub">km registrados en Cardio</div>
-                    </article>
-                    <article class="card cardio-stat-card">
-                        <div class="stat-label">Tiempo acumulado</div>
-                        <div class="stat-value" id="cardioTotalMinutes">—</div>
-                        <div class="stat-sub">minutos registrados en Cardio</div>
-                    </article>
-                    <article class="card cardio-stat-card">
-                        <div class="stat-label">Sesiones de Cardio</div>
-                        <div class="stat-value" id="cardioTotalSessions">—</div>
-                        <div class="stat-sub">sesiones con al menos un ejercicio Cardio</div>
-                    </article>
-                    <article class="card cardio-stat-card">
-                        <div class="stat-label">Ritmo de carrera</div>
-                        <div class="stat-value" id="cardioRunningPace">—</div>
-                        <div class="stat-sub">min/km · solo Correr con tiempo y distancia</div>
-                    </article>
-                </div>
-                <p class="cardio-hint">El ritmo se calcula automáticamente: minutos totales ÷ kilómetros totales. Las mediciones faltantes no se interpretan como cero.</p>
-            </section>
-
             <section class="grid dashboard-grid">
                 <article class="card section-card">
                     <div class="section-head">
@@ -1194,6 +1165,37 @@
                                 Selecciona un ejercicio para comenzar a analizar su evolución.
                             </div>
                         </div>
+                        <section class="card section-card cardio-overview" id="cardioOverview" aria-labelledby="cardioOverviewTitle" hidden>
+                        <div class="section-head">
+                        <div>
+                        <h2 id="cardioOverviewTitle">Resumen de Cardio</h2>
+                        <p>Distancia, tiempo y ritmo calculados con tus entrenamientos registrados.</p>
+                        </div>
+                        </div>
+                        <div class="grid cardio-stats-grid">
+                        <article class="card cardio-stat-card">
+                        <div class="stat-label">Distancia acumulada</div>
+                        <div class="stat-value" id="cardioTotalDistance">—</div>
+                        <div class="stat-sub">km registrados en Cardio</div>
+                        </article>
+                        <article class="card cardio-stat-card">
+                        <div class="stat-label">Tiempo acumulado</div>
+                        <div class="stat-value" id="cardioTotalMinutes">—</div>
+                        <div class="stat-sub">minutos registrados en Cardio</div>
+                        </article>
+                        <article class="card cardio-stat-card">
+                        <div class="stat-label">Sesiones de Cardio</div>
+                        <div class="stat-value" id="cardioTotalSessions">—</div>
+                        <div class="stat-sub">sesiones con al menos un ejercicio Cardio</div>
+                        </article>
+                        <article class="card cardio-stat-card">
+                        <div class="stat-label">Ritmo de carrera</div>
+                        <div class="stat-value" id="cardioRunningPace">—</div>
+                        <div class="stat-sub">min/km · solo Correr con tiempo y distancia</div>
+                        </article>
+                        </div>
+                        <p class="cardio-hint">El ritmo se calcula automáticamente: minutos totales ÷ kilómetros totales. Las mediciones faltantes no se interpretan como cero.</p>
+                        </section>
                     </div>
                 </div>
             </section>
@@ -2132,6 +2134,9 @@ async function cargarEntrenamientos() {
         }
 
         function mostrarProgreso(claveEjercicio) {
+            const opcion = catalogoEjercicios.get(claveEjercicio);
+            document.getElementById("cardioOverview").hidden =
+                !opcion || opcion.grupo.toLowerCase() !== "cardio";
             if (!claveEjercicio || !catalogoEjercicios.has(claveEjercicio)) {
                 progressResult.innerHTML = "";
                 summaryCurrent.textContent = "—";
