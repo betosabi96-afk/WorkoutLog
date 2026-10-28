@@ -974,7 +974,7 @@
             <header class="topbar" id="dashboard">
                 <div>
                     <h1>Tu progreso, un vistazo.</h1>
-                    <p>Entrenamientos, evolución y regularidad en un solo dashboard.</p>
+                    <p>Entrenamientos, evolución y regularidad en un solo lugar.</p>
                 </div>
 
             </header>
@@ -1141,7 +1141,7 @@
                 <div class="section-head">
                     <div>
                         <h2>Estadísticas mensuales</h2>
-                        <p>Compara volumen, frecuencia y carga de trabajo mes contra mes.</p>
+                        <p>Compara tus entrenamientos de Fuerza y Cardio mes contra mes.</p>
                     </div>
                 </div>
 
@@ -1158,6 +1158,9 @@
                             <option value="workouts">Entrenamientos</option>
                             <option value="sets">Series</option>
                             <option value="reps">Repeticiones</option>
+                            <option value="cardioDistance">Distancia de Cardio (km)</option>
+                            <option value="cardioMinutes">Tiempo de Cardio (min)</option>
+                            <option value="cardioSessions">Sesiones de Cardio</option>
                         </select>
                     </div>
                 </div>
@@ -1198,6 +1201,21 @@
                         <div class="monthly-stat-value" id="monthMaxWeight">—</div>
                         <div class="monthly-stat-note">máximo registrado</div>
                     </div>
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Distancia de Cardio</div>
+                        <div class="monthly-stat-value" id="monthCardioDistance">—</div>
+                        <div class="monthly-stat-note">kilómetros registrados durante el mes</div>
+                    </div>
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Tiempo de Cardio</div>
+                        <div class="monthly-stat-value" id="monthCardioMinutes">—</div>
+                        <div class="monthly-stat-note">minutos registrados durante el mes</div>
+                    </div>
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Sesiones de Cardio</div>
+                        <div class="monthly-stat-value" id="monthCardioSessions">—</div>
+                        <div class="monthly-stat-note">sesiones con al menos un ejercicio cardiovascular</div>
+                    </div>
                 </div>
 
                 <div class="monthly-comparison">
@@ -1227,6 +1245,21 @@
                                 <span>Volumen</span>
                                 <strong class="comparison-current" id="compareVolumeValue">—</strong>
                                 <span class="comparison-change neutral" id="compareVolume">—</span>
+                            </div>
+                            <div class="comparison-row">
+                                <span>Distancia Cardio</span>
+                                <strong class="comparison-current" id="compareCardioDistanceValue">—</strong>
+                                <span class="comparison-change neutral" id="compareCardioDistance">—</span>
+                            </div>
+                            <div class="comparison-row">
+                                <span>Tiempo Cardio</span>
+                                <strong class="comparison-current" id="compareCardioMinutesValue">—</strong>
+                                <span class="comparison-change neutral" id="compareCardioMinutes">—</span>
+                            </div>
+                            <div class="comparison-row">
+                                <span>Sesiones Cardio</span>
+                                <strong class="comparison-current" id="compareCardioSessionsValue">—</strong>
+                                <span class="comparison-change neutral" id="compareCardioSessions">—</span>
                             </div>
                         </div>
                     </div>
@@ -1636,9 +1669,19 @@ async function cargarEntrenamientos() {
             let volume = 0;
             let maxWeight = 0;
             const uniqueExercises = new Set();
+            let cardioDistance = 0;
+            let cardioMinutes = 0;
+            let cardioSessions = 0;
+            const numeroValidoCardio = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) > 0;
 
             monthlySessions.forEach(session => {
+                let tieneCardio = false;
                 (session.exercises || []).forEach(exercise => {
+                    if (grupoDeEjercicio(exercise, session).toLowerCase() === "cardio") {
+                        tieneCardio = true;
+                        if (numeroValidoCardio(exercise.distanceKm)) cardioDistance += Number(exercise.distanceKm);
+                        if (numeroValidoCardio(exercise.durationMinutes)) cardioMinutes += Number(exercise.durationMinutes);
+                    }
                     const sets = Number(exercise.sets) || 0;
                     const reps = Number(exercise.reps) || 0;
                     const weight = Number(exercise.weightKg) || 0;
@@ -1652,6 +1695,7 @@ async function cargarEntrenamientos() {
                     volume += sets * reps * weight;
                     maxWeight = Math.max(maxWeight, weight);
                 });
+                if (tieneCardio) cardioSessions++;
             });
 
             return {
@@ -1660,7 +1704,10 @@ async function cargarEntrenamientos() {
                 sets: totalSets,
                 reps: totalReps,
                 volume,
-                maxWeight
+                maxWeight,
+                cardioDistance,
+                cardioMinutes,
+                cardioSessions
             };
         }
 
@@ -1807,6 +1854,18 @@ async function cargarEntrenamientos() {
                     label: "Repeticiones",
                     unit: "",
                     value: item => item.stats.reps
+                },
+                cardioDistance: {
+                    label: "Distancia de Cardio", unit: "km",
+                    value: item => Number(item.stats.cardioDistance.toFixed(2))
+                },
+                cardioMinutes: {
+                    label: "Tiempo de Cardio", unit: "min",
+                    value: item => Number(item.stats.cardioMinutes.toFixed(2))
+                },
+                cardioSessions: {
+                    label: "Sesiones de Cardio", unit: "",
+                    value: item => item.stats.cardioSessions
                 }
             };
 
@@ -1951,6 +2010,16 @@ async function cargarEntrenamientos() {
             monthReps.textContent = current.reps;
             monthVolume.textContent = formatVolume(current.volume);
             monthMaxWeight.textContent = `${current.maxWeight} kg`;
+            const formatoCardio = value => Number(value.toFixed(2)).toLocaleString("es-MX", {maximumFractionDigits: 2});
+            document.getElementById("monthCardioDistance").textContent = `${formatoCardio(current.cardioDistance)} km`;
+            document.getElementById("monthCardioMinutes").textContent = `${formatoCardio(current.cardioMinutes)} min`;
+            document.getElementById("monthCardioSessions").textContent = current.cardioSessions;
+            document.getElementById("compareCardioDistanceValue").textContent = `${formatoCardio(current.cardioDistance)} km`;
+            document.getElementById("compareCardioMinutesValue").textContent = `${formatoCardio(current.cardioMinutes)} min`;
+            document.getElementById("compareCardioSessionsValue").textContent = current.cardioSessions;
+            applyComparison(document.getElementById("compareCardioDistance"), comparisonText(current.cardioDistance, previous.cardioDistance));
+            applyComparison(document.getElementById("compareCardioMinutes"), comparisonText(current.cardioMinutes, previous.cardioMinutes));
+            applyComparison(document.getElementById("compareCardioSessions"), comparisonText(current.cardioSessions, previous.cardioSessions));
 
             comparisonTitle.textContent =
                 `Vs. ${monthLabel(previousKey)}`;
@@ -2532,7 +2601,7 @@ async function cargarEntrenamientos() {
             calendarTitle.textContent =
                 nombreMes.charAt(0).toUpperCase() +
                 nombreMes.slice(1) +
-                " de " +
+                " " +
                 year;
 
             const firstDay =
@@ -2612,194 +2681,4 @@ async function cargarEntrenamientos() {
                 monthlyMetric.value
             );
 
-            renderMonthlyStatistics();
-        });
-
-        filter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_filter",
-                filter.value
-            );
-
-            renderHistory(filter.value);
-        });
-
-        exerciseFilter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_exercise",
-                exerciseFilter.value
-            );
-
-            configurarMetricasProgreso();
-            mostrarProgreso(exerciseFilter.value);
-        });
-
-        metricFilter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_metric",
-                metricFilter.value
-            );
-
-            if (exerciseFilter.value) {
-                mostrarProgreso(exerciseFilter.value);
-            }
-        });
-
-        prevMonth.addEventListener("click", () => {
-            calendarioActual =
-                new Date(
-                    calendarioActual.getFullYear(),
-                    calendarioActual.getMonth() - 1,
-                    1
-                );
-
-            guardarMesCalendario();
-            renderCalendario();
-        });
-
-        nextMonth.addEventListener("click", () => {
-            calendarioActual =
-                new Date(
-                    calendarioActual.getFullYear(),
-                    calendarioActual.getMonth() + 1,
-                    1
-                );
-
-            guardarMesCalendario();
-            renderCalendario();
-        });
-
-        buildMonthOptions();
-
-        const savedMonthlyMetric =
-            sessionStorage.getItem("workout_monthly_metric");
-
-        if (
-            savedMonthlyMetric &&
-            [...monthlyMetric.options].some(
-                option => option.value === savedMonthlyMetric
-            )
-        ) {
-            monthlyMetric.value = savedMonthlyMetric;
-        }
-
-        renderOverview();
-        renderCardioOverview();
-        renderActivityWeek();
-        renderMonthlyStatistics();
-        renderHistory(filter.value);
-
-        if (exerciseFilter.value) {
-            mostrarProgreso(exerciseFilter.value);
-        }
-
-        renderCalendario();
-
-        const estadoInicial = JSON.stringify(sessions);
-
-        setInterval(async () => {
-            try {
-                const refreshResponse =
-                    await fetch("/api/sessions", {
-                        cache: "no-store"
-                    });
-
-                if (!refreshResponse.ok) {
-                    return;
-                }
-
-                const sesionesActualizadas =
-                    await refreshResponse.json();
-
-                const estadoActual =
-                    JSON.stringify(sesionesActualizadas);
-
-                if (estadoActual !== estadoInicial) {
-                    sessionStorage.setItem(
-                        "workout_filter",
-                        filter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_exercise",
-                        exerciseFilter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_metric",
-                        metricFilter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_month",
-                        monthFilter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_monthly_metric",
-                        monthlyMetric.value
-                    );
-
-                    guardarMesCalendario();
-
-                    window.location.reload();
-                }
-            } catch (refreshError) {
-                console.warn(
-                    "No se pudo comprobar si hay nuevos entrenamientos.",
-                    refreshError
-                );
-            }
-        }, AUTO_REFRESH_MS);
-
-    } catch(error) {
-        status.textContent =
-            "No se pudieron cargar los entrenamientos.";
-
-        console.error(error);
-    }
-}
-
-function activarNavegacionPorScroll() {
-    const links = [...document.querySelectorAll(".nav a")];
-
-    const secciones = links
-        .map(link => {
-            const id = link.getAttribute("href");
-            return {
-                link,
-                section: document.querySelector(id)
-            };
-        })
-        .filter(item => item.section);
-
-    function actualizar() {
-        const referencia = window.scrollY + window.innerHeight * 0.28;
-
-        let activa = secciones[0];
-
-        secciones.forEach(item => {
-            if (item.section.offsetTop <= referencia) {
-                activa = item;
-            }
-        });
-
-        links.forEach(link => link.classList.remove("active"));
-
-        if (activa) {
-            activa.link.classList.add("active");
-        }
-    }
-
-    window.addEventListener("scroll", actualizar, { passive: true });
-    window.addEventListener("resize", actualizar);
-    actualizar();
-}
-
-activarNavegacionPorScroll();
-
-cargarEntrenamientos();
-</script>
-
-</body>
-</html>
+            renderMonthlySt
