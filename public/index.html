@@ -2572,11 +2572,7 @@ async function cargarEntrenamientos() {
                                 .map(exercise => `
                                     <div class="exercise">
                                         <strong>${exercise.name}</strong>
-                                        <span>
-                                            ${exercise.sets} series ×
-                                            ${exercise.reps} repeticiones
-                                            · ${exercise.weightKg} kg
-                                        </span>
+                                        <span>${formatearMetricasHistorial(exercise)}</span>
                                     </div>
                                 `)
                                 .join("")}
