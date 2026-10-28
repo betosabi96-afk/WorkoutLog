@@ -1165,7 +1165,10 @@
                                 Selecciona un ejercicio para comenzar a analizar su evolución.
                             </div>
                         </div>
-                        <section class="card section-card cardio-overview" id="cardioOverview" aria-labelledby="cardioOverviewTitle" hidden>
+
+                    </div>
+                </div>
+                        <section class="card section-card cardio-overview" id="cardioOverview" aria-labelledby="cardioOverviewTitle" hidden style="display:none">
                         <div class="section-head">
                         <div>
                         <h2 id="cardioOverviewTitle">Resumen de Cardio</h2>
@@ -1196,8 +1199,6 @@
                         </div>
                         <p class="cardio-hint">El ritmo se calcula automáticamente: minutos totales ÷ kilómetros totales. Las mediciones faltantes no se interpretan como cero.</p>
                         </section>
-                    </div>
-                </div>
             </section>
 
 
@@ -2135,8 +2136,10 @@ async function cargarEntrenamientos() {
 
         function mostrarProgreso(claveEjercicio) {
             const opcion = catalogoEjercicios.get(claveEjercicio);
-            document.getElementById("cardioOverview").hidden =
-                !opcion || opcion.grupo.toLowerCase() !== "cardio";
+            const cardioOverview = document.getElementById("cardioOverview");
+            const mostrarCardio = Boolean(opcion && opcion.grupo.toLowerCase() === "cardio");
+            cardioOverview.hidden = !mostrarCardio;
+            cardioOverview.style.display = mostrarCardio ? "block" : "none";
             if (!claveEjercicio || !catalogoEjercicios.has(claveEjercicio)) {
                 progressResult.innerHTML = "";
                 summaryCurrent.textContent = "—";
