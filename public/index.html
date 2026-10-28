@@ -1093,7 +1093,7 @@
                 <div class="section-head">
                     <div>
                         <h2>Progreso por ejercicio</h2>
-                        <p>Compara peso, repeticiones o series a través del tiempo.</p>
+                        <p>Compara peso, repeticiones y series; o duración y distancia en cardio.</p>
                     </div>
                 </div>
 
@@ -1432,42 +1432,76 @@ async function cargarEntrenamientos() {
             filter.value = filtroGuardado;
         }
 
-        const ejercicios = [...new Set(
-            sessions.flatMap(session =>
-                Array.isArray(session.exercises)
-                    ? session.exercises.map(exercise => exercise.name).filter(Boolean)
-                    : []
-            )
-        )].sort((a, b) => a.localeCompare(b, "es"));
+        // Cada opción identifica nombre + grupo; así "Remo · Cardio"
+        // no contamina los datos de "Remo · Espalda".
+        function grupoDeEjercicio(exercise, session) {
+            return String(exercise.muscleGroup ||
+                (session.activity !== "Mixto" ? session.activity : "") ||
+                "Sin categoría").trim();
+        }
 
-        ejercicios.forEach(ejercicio => {
-            const option = document.createElement("option");
-            option.value = ejercicio;
-            option.textContent = ejercicio;
-            exerciseFilter.appendChild(option);
+        const catalogoEjercicios = new Map();
+        sessions.forEach(session => {
+            (session.exercises || []).forEach(exercise => {
+                if (!exercise.name) return;
+                const grupo = grupoDeEjercicio(exercise, session);
+                const clave = JSON.stringify([exercise.name, grupo]);
+                catalogoEjercicios.set(clave, { nombre: exercise.name, grupo });
+            });
         });
 
+        const ejercicios = [...new Set(
+            [...catalogoEjercicios.values()].map(item => item.nombre)
+        )];
+
+        [...catalogoEjercicios.entries()]
+            .sort((a, b) =>
+                a[1].nombre.localeCompare(b[1].nombre, "es") ||
+                a[1].grupo.localeCompare(b[1].grupo, "es")
+            )
+            .forEach(([clave, item]) => {
+                const option = document.createElement("option");
+                option.value = clave;
+                option.textContent = `${item.nombre} · ${item.grupo}`;
+                exerciseFilter.appendChild(option);
+            });
+
         const ejercicioGuardado = sessionStorage.getItem("workout_exercise");
-
-        if (
-            ejercicioGuardado &&
-            [...exerciseFilter.options].some(
-                option => option.value === ejercicioGuardado
-            )
-        ) {
-            exerciseFilter.value = ejercicioGuardado;
+        if (ejercicioGuardado) {
+            if (catalogoEjercicios.has(ejercicioGuardado)) {
+                exerciseFilter.value = ejercicioGuardado;
+            } else {
+                // Compatibilidad con la selección antigua (guardada solo por nombre).
+                const anterior = [...catalogoEjercicios.entries()].find(
+                    ([, item]) => item.nombre === ejercicioGuardado && item.grupo !== "Cardio"
+                ) || [...catalogoEjercicios.entries()].find(
+                    ([, item]) => item.nombre === ejercicioGuardado
+                );
+                if (anterior) exerciseFilter.value = anterior[0];
+            }
         }
 
-        const metricaGuardada = sessionStorage.getItem("workout_metric");
-
-        if (
-            metricaGuardada &&
-            [...metricFilter.options].some(
-                option => option.value === metricaGuardada
-            )
-        ) {
-            metricFilter.value = metricaGuardada;
+        function configurarMetricasProgreso() {
+            const seleccionado = catalogoEjercicios.get(exerciseFilter.value);
+            const esCardio = seleccionado?.grupo.toLowerCase() === "cardio";
+            const opciones = esCardio
+                ? [["durationMinutes", "Duración"], ["distanceKm", "Distancia"]]
+                : [["weightKg", "Peso"], ["reps", "Repeticiones"], ["sets", "Series"]];
+            const actual = metricFilter.value;
+            const guardada = sessionStorage.getItem("workout_metric");
+            metricFilter.innerHTML = "";
+            opciones.forEach(([valor, texto]) => {
+                const option = document.createElement("option");
+                option.value = valor;
+                option.textContent = texto;
+                metricFilter.appendChild(option);
+            });
+            const permitidas = opciones.map(([valor]) => valor);
+            metricFilter.value = permitidas.includes(actual)
+                ? actual : permitidas.includes(guardada) ? guardada : opciones[0][0];
         }
+
+        configurarMetricasProgreso();
 
         function renderOverview() {
             let totalSets = 0;
@@ -1976,17 +2010,22 @@ async function cargarEntrenamientos() {
             });
         }
 
-        function crearHistorialEjercicio(nombreEjercicio) {
+        function crearHistorialEjercicio(claveEjercicio) {
+            const seleccionado = catalogoEjercicios.get(claveEjercicio);
+            if (!seleccionado) return [];
             const historial = [];
 
             sessions.forEach(session => {
                 (session.exercises || []).forEach(exercise => {
-                    if (exercise.name === nombreEjercicio) {
+                    if (exercise.name === seleccionado.nombre &&
+                        grupoDeEjercicio(exercise, session) === seleccionado.grupo) {
                         historial.push({
                             fecha: new Date(session.startedAt),
                             sets: Number(exercise.sets) || 0,
                             reps: Number(exercise.reps) || 0,
-                            weightKg: Number(exercise.weightKg) || 0
+                            weightKg: Number(exercise.weightKg) || 0,
+                            durationMinutes: Number(exercise.durationMinutes) || 0,
+                            distanceKm: Number(exercise.distanceKm) || 0
                         });
                     }
                 });
@@ -1996,8 +2035,8 @@ async function cargarEntrenamientos() {
             return historial;
         }
 
-        function mostrarProgreso(nombreEjercicio) {
-            if (!nombreEjercicio) {
+        function mostrarProgreso(claveEjercicio) {
+            if (!claveEjercicio || !catalogoEjercicios.has(claveEjercicio)) {
                 progressResult.innerHTML = "";
                 summaryCurrent.textContent = "—";
                 summaryBest.textContent = "—";
@@ -2007,35 +2046,32 @@ async function cargarEntrenamientos() {
                 return;
             }
 
-            const historial = crearHistorialEjercicio(nombreEjercicio);
-
+            const seleccionado = catalogoEjercicios.get(claveEjercicio);
+            const esCardio = seleccionado.grupo.toLowerCase() === "cardio";
+            const historial = crearHistorialEjercicio(claveEjercicio);
             progressResult.innerHTML = historial
                 .slice(-4)
                 .reverse()
-                .map((registro, index, array) => {
-                    const fechaBase =
-                        registro.fecha.toLocaleDateString("es-MX");
-
-                    const sameDateCount =
-                        historial.filter(item =>
-                            item.fecha.toLocaleDateString("es-MX") === fechaBase
-                        ).length;
-
-                    const fecha =
-                        sameDateCount > 1
-                            ? `${fechaBase} · registro`
-                            : fechaBase;
-
+                .map(registro => {
+                    const fechaBase = registro.fecha.toLocaleDateString("es-MX");
+                    const sameDateCount = historial.filter(item =>
+                        item.fecha.toLocaleDateString("es-MX") === fechaBase
+                    ).length;
+                    const fecha = sameDateCount > 1
+                        ? `${fechaBase} · registro` : fechaBase;
+                    const detalle = esCardio
+                        ? [
+                            registro.durationMinutes > 0 ? `${registro.durationMinutes} min` : "",
+                            registro.distanceKm > 0 ? `${registro.distanceKm} km` : ""
+                        ].filter(Boolean).join(" · ") || "Sin duración o distancia registrada"
+                        : `${registro.sets} series × ${registro.reps} repeticiones · ${registro.weightKg} kg`;
                     return `
                         <div class="progress-entry">
                             <strong>${fecha}</strong>
-                            ${registro.sets} series ×
-                            ${registro.reps} repeticiones
-                            · ${registro.weightKg} kg
+                            ${detalle}
                         </div>
                     `;
-                })
-                .join("");
+                }).join("");
 
             actualizarResumen(historial, metricFilter.value);
             mostrarGrafica(historial, metricFilter.value);
@@ -2052,7 +2088,9 @@ async function cargarEntrenamientos() {
             const unidades = {
                 weightKg: " kg",
                 reps: " reps",
-                sets: " series"
+                sets: " series",
+                durationMinutes: " min",
+                distanceKm: " km"
             };
 
             const valores =
@@ -2086,7 +2124,9 @@ async function cargarEntrenamientos() {
             const etiquetas = {
                 weightKg: "kg",
                 reps: "reps",
-                sets: "series"
+                sets: "series",
+                durationMinutes: "min",
+                distanceKm: "km"
             };
 
             const valores =
@@ -2541,6 +2581,7 @@ async function cargarEntrenamientos() {
                 exerciseFilter.value
             );
 
+            configurarMetricasProgreso();
             mostrarProgreso(exerciseFilter.value);
         });
 
