@@ -1104,7 +1104,7 @@
                 </div>
             </section>
 
-            <section class="card section-card cardio-overview" id="cardioOverview" aria-labelledby="cardioOverviewTitle" hidden style="display:none">
+            <section class="card section-card cardio-overview" id="cardioOverview" aria-labelledby="cardioOverviewTitle">
                         <div class="section-head">
                         <div>
                         <h2 id="cardioOverviewTitle">Resumen de Cardio</h2>
@@ -1161,6 +1161,7 @@
                             <option value="cardioDistance">Distancia de Cardio (km)</option>
                             <option value="cardioMinutes">Tiempo de Cardio (min)</option>
                             <option value="cardioSessions">Sesiones de Cardio</option>
+                            <option value="cardioPace">Ritmo de carrera (min/km)</option>
                         </select>
                     </div>
                 </div>
@@ -1215,6 +1216,11 @@
                         <div class="monthly-stat-label">Sesiones de Cardio</div>
                         <div class="monthly-stat-value" id="monthCardioSessions">—</div>
                         <div class="monthly-stat-note">sesiones con al menos un ejercicio cardiovascular</div>
+                    </div>
+                    <div class="monthly-stat">
+                        <div class="monthly-stat-label">Ritmo de carrera</div>
+                        <div class="monthly-stat-value" id="monthCardioPace">—</div>
+                        <div class="monthly-stat-note">min/km · registros de Correr con distancia y tiempo</div>
                     </div>
                 </div>
 
@@ -1504,11 +1510,18 @@ async function cargarEntrenamientos() {
             }
         }
 
-        function configurarMetricasProgreso() {
+        
+         function formatoRitmo(minutosPorKm) {
+             if (!Number.isFinite(minutosPorKm) || minutosPorKm <= 0) return "—";
+             const segundos = Math.round(minutosPorKm * 60);
+             return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")} min/km`;
+         }
+
+         function configurarMetricasProgreso() {
             const seleccionado = catalogoEjercicios.get(exerciseFilter.value);
             const esCardio = seleccionado?.grupo.toLowerCase() === "cardio";
             const opciones = esCardio
-                ? [["durationMinutes", "Duración"], ["distanceKm", "Distancia"]]
+                ? [["durationMinutes", "Duración"], ["distanceKm", "Distancia"], ["paceMinKm", "Ritmo (min/km)"]]
                 : [["weightKg", "Peso"], ["reps", "Repeticiones"], ["sets", "Series"]];
             const actual = metricFilter.value;
             const guardada = sessionStorage.getItem("workout_metric");
@@ -1671,8 +1684,11 @@ async function cargarEntrenamientos() {
             const uniqueExercises = new Set();
             let cardioDistance = 0;
             let cardioMinutes = 0;
-            let cardioSessions = 0;
-            const numeroValidoCardio = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) > 0;
+            
+             let cardioSessions = 0;
+             let runningMinutes = 0;
+             let runningDistance = 0;
+             const numeroValidoCardio = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) > 0;
 
             monthlySessions.forEach(session => {
                 let tieneCardio = false;
@@ -1680,7 +1696,13 @@ async function cargarEntrenamientos() {
                     if (grupoDeEjercicio(exercise, session).toLowerCase() === "cardio") {
                         tieneCardio = true;
                         if (numeroValidoCardio(exercise.distanceKm)) cardioDistance += Number(exercise.distanceKm);
-                        if (numeroValidoCardio(exercise.durationMinutes)) cardioMinutes += Number(exercise.durationMinutes);
+                        
+                         if (numeroValidoCardio(exercise.durationMinutes)) cardioMinutes += Number(exercise.durationMinutes);
+                         if (String(exercise.name || "").trim().toLowerCase() === "correr" &&
+                             numeroValidoCardio(exercise.durationMinutes) && numeroValidoCardio(exercise.distanceKm)) {
+                             runningMinutes += Number(exercise.durationMinutes);
+                             runningDistance += Number(exercise.distanceKm);
+                         }
                     }
                     const sets = Number(exercise.sets) || 0;
                     const reps = Number(exercise.reps) || 0;
@@ -1707,8 +1729,10 @@ async function cargarEntrenamientos() {
                 maxWeight,
                 cardioDistance,
                 cardioMinutes,
-                cardioSessions
-            };
+                
+                 cardioSessions,
+                 cardioPace: runningDistance > 0 ? runningMinutes / runningDistance : null
+             };
         }
 
         function formatVolume(value) {
@@ -1863,17 +1887,23 @@ async function cargarEntrenamientos() {
                     label: "Tiempo de Cardio", unit: "min",
                     value: item => Number(item.stats.cardioMinutes.toFixed(2))
                 },
-                cardioSessions: {
-                    label: "Sesiones de Cardio", unit: "",
-                    value: item => item.stats.cardioSessions
-                }
+                
+                 cardioSessions: {
+                     label: "Sesiones de Cardio", unit: "",
+                     value: item => item.stats.cardioSessions
+                 },
+                 cardioPace: {
+                     label: "Ritmo de carrera", unit: "min/km",
+                     value: item => item.stats.cardioPace === null ? null : Number(item.stats.cardioPace.toFixed(2))
+                 }
             };
 
             const config = metricConfig[metric];
             monthlyChartLabel.textContent = config.label;
 
             const values = months.map(config.value);
-            const max = Math.max(...values, 1);
+            
+             const max = Math.max(...values.filter(value => value !== null), 1);
 
             const width = 800;
             const height = 300;
@@ -1898,24 +1928,38 @@ async function cargarEntrenamientos() {
                 chartH -
                 (value / max) * chartH;
 
-            const points = months
-                .map((item, index) =>
-                    `${x(index)},${y(config.value(item))}`
-                )
-                .join(" ");
+            
+             const points = months
+                 .map((item, index) => {
+                     const value = config.value(item);
+                     return value === null ? null : `${x(index)},${y(value)}`;
+                 });
+             const segmentos = [];
+             let segmento = [];
+             points.forEach(point => {
+                 if (point === null) {
+                     if (segmento.length) segmentos.push(segmento.join(" "));
+                     segmento = [];
+                 } else segmento.push(point);
+             });
+             if (segmento.length) segmentos.push(segmento.join(" "));
+             const lines = segmentos.map(segmentPoints => `<polyline points="${segmentPoints}" fill="none" stroke="#3C93FA" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"></polyline>`).join("");
 
             const marks = months.map((item, index) => {
-                const value = config.value(item);
-                const label =
+                
+                 const value = config.value(item);
+                 const label =
                     item.date
                         .toLocaleDateString("es-MX", {
                             month: "short"
                         })
                         .replace(".", "");
 
-                return `
-                    <circle
-                        cx="${x(index)}"
+                
+                 if (value === null) return `<text x="${x(index)}" y="${height - 18}" fill="rgba(255,255,255,.68)" text-anchor="middle" font-size="11">${label}</text>`;
+                 return `
+                     <circle
+                         cx="${x(index)}"
                         cy="${y(value)}"
                         r="5"
                         fill="#00D4C6"
@@ -1984,14 +2028,7 @@ async function cargarEntrenamientos() {
                         0 ${config.unit}
                     </text>
 
-                    <polyline
-                        points="${points}"
-                        fill="none"
-                        stroke="#3C93FA"
-                        stroke-width="4"
-                        stroke-linejoin="round"
-                        stroke-linecap="round">
-                    </polyline>
+                    ${lines}
 
                     ${marks}
                 </svg>
@@ -2013,7 +2050,9 @@ async function cargarEntrenamientos() {
             const formatoCardio = value => Number(value.toFixed(2)).toLocaleString("es-MX", {maximumFractionDigits: 2});
             document.getElementById("monthCardioDistance").textContent = `${formatoCardio(current.cardioDistance)} km`;
             document.getElementById("monthCardioMinutes").textContent = `${formatoCardio(current.cardioMinutes)} min`;
-            document.getElementById("monthCardioSessions").textContent = current.cardioSessions;
+            
+             document.getElementById("monthCardioSessions").textContent = current.cardioSessions;
+             document.getElementById("monthCardioPace").textContent = formatoRitmo(current.cardioPace);
             document.getElementById("compareCardioDistanceValue").textContent = `${formatoCardio(current.cardioDistance)} km`;
             document.getElementById("compareCardioMinutesValue").textContent = `${formatoCardio(current.cardioMinutes)} min`;
             document.getElementById("compareCardioSessionsValue").textContent = current.cardioSessions;
@@ -2128,7 +2167,10 @@ async function cargarEntrenamientos() {
                             reps: Number(exercise.reps) || 0,
                             weightKg: Number(exercise.weightKg) || 0,
                             durationMinutes: Number(exercise.durationMinutes) || 0,
-                            distanceKm: Number(exercise.distanceKm) || 0
+                            
+                             distanceKm: Number(exercise.distanceKm) || 0,
+                             paceMinKm: Number(exercise.distanceKm) > 0 && Number(exercise.durationMinutes) > 0
+                                 ? Number(exercise.durationMinutes) / Number(exercise.distanceKm) : 0
                         });
                     }
                 });
@@ -2141,9 +2183,9 @@ async function cargarEntrenamientos() {
         function mostrarProgreso(claveEjercicio) {
             const opcion = catalogoEjercicios.get(claveEjercicio);
             const cardioOverview = document.getElementById("cardioOverview");
-            const mostrarCardio = Boolean(opcion && opcion.grupo.toLowerCase() === "cardio");
-            cardioOverview.hidden = !mostrarCardio;
-            cardioOverview.style.display = mostrarCardio ? "block" : "none";
+            
+             // Resumen global visible aunque no se haya seleccionado un ejercicio.
+             cardioOverview.hidden = false;
             if (!claveEjercicio || !catalogoEjercicios.has(claveEjercicio)) {
                 progressResult.innerHTML = "";
                 summaryCurrent.textContent = "—";
@@ -2170,7 +2212,9 @@ async function cargarEntrenamientos() {
                     const detalle = esCardio
                         ? [
                             registro.durationMinutes > 0 ? `${registro.durationMinutes} min` : "",
-                            registro.distanceKm > 0 ? `${registro.distanceKm} km` : ""
+                            
+                             registro.distanceKm > 0 ? `${registro.distanceKm} km` : "",
+                             registro.paceMinKm > 0 ? formatoRitmo(registro.paceMinKm) : ""
                         ].filter(Boolean).join(" · ") || "Sin duración o distancia registrada"
                         : `${registro.sets} series × ${registro.reps} repeticiones · ${registro.weightKg} kg`;
                     return `
@@ -2208,17 +2252,21 @@ async function cargarEntrenamientos() {
                 reps: " reps",
                 sets: " series",
                 durationMinutes: " min",
-                distanceKm: " km"
-            };
+                
+                 distanceKm: " km",
+                 paceMinKm: " min/km"
+             };
 
             const valores =
                 historial.map(item => Number(item[metrica]) || 0);
 
             const actual = valores[valores.length - 1];
-            const mejor = Math.max(...valores);
+            
+             const mejor = metrica === "paceMinKm" ? Math.min(...valores) : Math.max(...valores);
 
-            summaryCurrent.textContent = actual + unidades[metrica];
-            summaryBest.textContent = mejor + unidades[metrica];
+            
+             summaryCurrent.textContent = metrica === "paceMinKm" ? formatoRitmo(actual) : actual + unidades[metrica];
+             summaryBest.textContent = metrica === "paceMinKm" ? formatoRitmo(mejor) : mejor + unidades[metrica];
 
             if (valores.length < 2) {
                 summaryChange.textContent = "—";
@@ -2227,8 +2275,10 @@ async function cargarEntrenamientos() {
                 const cambio = actual - anterior;
                 const signo = cambio > 0 ? "+" : "";
 
-                summaryChange.textContent =
-                    signo + cambio + unidades[metrica];
+                
+                 summaryChange.textContent = metrica === "paceMinKm"
+                     ? `${cambio > 0 ? "+" : ""}${Math.round(cambio * 60)} seg/km`
+                     : signo + cambio + unidades[metrica];
             }
         }
 
@@ -2244,8 +2294,10 @@ async function cargarEntrenamientos() {
                 reps: "reps",
                 sets: "series",
                 durationMinutes: "min",
-                distanceKm: "km"
-            };
+                
+                 distanceKm: "km",
+                 paceMinKm: "min/km"
+             };
 
             const valores =
                 historial.map(item => Number(item[metrica]) || 0);
@@ -2412,10 +2464,15 @@ async function cargarEntrenamientos() {
                 if (numeroValido(exercise.distanceKm)) {
                     detalles.push(`${formato(exercise.distanceKm)} km`);
                 }
-                return detalles.join(" · ") || "Sin métricas registradas";
-            }
+                
+                 if (String(exercise.name || "").trim().toLowerCase() === "correr" &&
+                     numeroValido(exercise.durationMinutes) && numeroValido(exercise.distanceKm)) {
+                     detalles.push(formatoRitmo(Number(exercise.durationMinutes) / Number(exercise.distanceKm)));
+                 }
+                 return detalles.join(" · ") || "Sin métricas registradas";
+             }
 
-            const detalles = [];
+             const detalles = [];
             if (numeroValido(exercise.sets) && numeroValido(exercise.reps)) {
                 detalles.push(`${formato(exercise.sets)} series × ${formato(exercise.reps)} repeticiones`);
             } else {
@@ -2425,10 +2482,11 @@ async function cargarEntrenamientos() {
             if (numeroValido(exercise.weightKg)) {
                 detalles.push(`${formato(exercise.weightKg)} kg`);
             }
-            return detalles.join(" · ") || "Sin métricas registradas";
-        }
+            
+             return detalles.join(" · ") || "Sin métricas registradas";
+         }
 
-        function renderHistory(filtroSeleccionado) {
+         function renderHistory(filtroSeleccionado) {
             container.innerHTML = "";
 
             const filtradas =
