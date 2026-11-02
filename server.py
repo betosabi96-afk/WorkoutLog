@@ -6,6 +6,7 @@ import sqlite3
 import json
 import uuid
 import os
+import math
 
 import psycopg
 from psycopg.rows import dict_row
@@ -278,6 +279,86 @@ class Handler(SimpleHTTPRequestHandler):
                 "error": "Ruta no encontrada"
             }
         )
+
+    def do_PUT(self):
+        path = urlparse(self.path).path
+        if path.startswith("/api/exercises/"):
+            exercise_id = path[len("/api/exercises/"):]
+            if not exercise_id or "/" in exercise_id:
+                return self.send_json(404, {"ok": False, "message": "Ejercicio no encontrado."})
+            return self.update_exercise(exercise_id)
+        return self.send_json(404, {"ok": False, "message": "Ruta no encontrada."})
+
+    def update_exercise(self, exercise_id):
+        try:
+            uuid.UUID(exercise_id)
+            body = self.read_json_body()
+            if not isinstance(body, dict):
+                raise ValueError("El cuerpo debe ser un objeto.")
+            name = str(body.get("name", "")).strip()
+            group = str(body.get("muscleGroup", "")).strip()
+            if not name or len(name) > 150 or not group or len(group) > 60:
+                raise ValueError("Nombre o grupo muscular inválido.")
+            cardio = group.casefold() == "cardio"
+            keys = ("durationMinutes", "distanceKm") if cardio else ("sets", "reps", "weightKg")
+            values = {}
+            for key in keys:
+                raw = body.get(key, 0)
+                val = float(raw)
+                if not (0 <= val <= 1000000) or not math.isfinite(val):
+                    raise ValueError("Las métricas deben ser números válidos no negativos.")
+                if key in ("sets", "reps", "durationMinutes") and not val.is_integer():
+                    raise ValueError("Series, repeticiones y duración deben ser enteros.")
+                values[key] = int(val) if key in ("sets", "reps", "durationMinutes") else val
+            if cardio:
+                if values["durationMinutes"] <= 0 and values["distanceKm"] <= 0:
+                    raise ValueError("Cardio necesita duración o distancia.")
+            elif values["sets"] <= 0 or values["reps"] <= 0:
+                raise ValueError("Fuerza necesita series y repeticiones mayores que cero.")
+        except (ValueError, TypeError, OverflowError) as exc:
+            return self.send_json(400, {"ok": False, "message": str(exc)})
+
+        con = connect()
+        p = sql_placeholder()
+        try:
+            original = con.execute(
+                f"SELECT session_id FROM exercises WHERE id = {p}", (exercise_id,)
+            ).fetchone()
+            if original is None:
+                return self.send_json(404, {"ok": False, "message": "Ejercicio no encontrado."})
+            session_id = original["session_id"]
+            fields = {
+                "name": name, "muscle_group": group,
+                "sets": 0 if cardio else values["sets"],
+                "reps": 0 if cardio else values["reps"],
+                "weight_kg": 0 if cardio else values["weightKg"],
+                "duration_minutes": values["durationMinutes"] if cardio else 0,
+                "distance_km": values["distanceKm"] if cardio else 0,
+            }
+            assignments = ", ".join(f"{col} = {p}" for col in fields)
+            con.execute(
+                f"UPDATE exercises SET {assignments} WHERE id = {p} AND session_id = {p}",
+                tuple(fields.values()) + (exercise_id, session_id)
+            )
+            siblings = con.execute(
+                f"SELECT muscle_group, duration_minutes FROM exercises WHERE session_id = {p}",
+                (session_id,)
+            ).fetchall()
+            groups = {str(row["muscle_group"]).strip() for row in siblings if row["muscle_group"]}
+            activity = next(iter(groups)) if len(groups) == 1 else "Mixto" if groups else "Entrenamiento"
+            duration = sum(max(0, int(row["duration_minutes"] or 0)) for row in siblings)
+            con.execute(
+                f"UPDATE sessions SET activity = {p}, total_duration_minutes = {p} WHERE id = {p}",
+                (activity, duration, session_id)
+            )
+            con.commit()
+            return self.send_json(200, {"ok": True, "message": "Ejercicio actualizado.", "id": exercise_id})
+        except Exception as exc:
+            con.rollback()
+            print("ERROR AL EDITAR:", repr(exc))
+            return self.send_json(500, {"ok": False, "message": "No se pudieron guardar los cambios."})
+        finally:
+            con.close()
 
     def get_sessions(self):
         con = connect()
