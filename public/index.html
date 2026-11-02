@@ -944,6 +944,20 @@
                 display: none;
             }
         }
+
+        .edit-exercise-btn { display:block; margin-top:12px; padding:7px 12px; border:1px solid rgba(0,212,198,.5); border-radius:8px; background:#004C94; color:white; cursor:pointer; font-weight:700; }
+        .edit-exercise-btn:hover { background:#006ECF; }
+        .edit-overlay { position:fixed; inset:0; z-index:9999; padding:18px; background:rgba(0,0,0,.77); display:flex; align-items:center; justify-content:center; }
+        .edit-overlay[hidden] { display:none; }
+        .edit-dialog { background:#34495F; border:1px solid #52647A; border-radius:18px; padding:22px; width:min(460px,100%); max-height:90vh; overflow:auto; color:white; }
+        .edit-dialog h2 { color:#73CC80; margin:0 0 14px; }
+        .edit-dialog label { display:block; margin:12px 0 5px; color:#e8f0f6; font-size:14px; }
+        .edit-dialog input, .edit-dialog select { width:100%; padding:10px; border-radius:9px; border:1px solid #71879c; background:#26384A; color:white; font:inherit; }
+        .edit-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .edit-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:20px; }
+        .edit-actions button { cursor:pointer; border:0; border-radius:9px; padding:11px 15px; font:inherit; font-weight:700; color:white; background:#52647A; }
+        .edit-actions button[type=submit] { background:#006ECF; }
+        #editError { color:#ffb1b1; min-height:1.2em; margin-top:10px; }
     </style>
 </head>
 
@@ -1331,7 +1345,95 @@
 
 </div>
 
+
+<div id="editOverlay" class="edit-overlay" hidden>
+    <form id="editExerciseForm" class="edit-dialog" aria-label="Editar ejercicio">
+        <h2>Editar ejercicio</h2>
+        <input type="hidden" id="editId">
+        <label for="editName">Ejercicio</label><input id="editName" required maxlength="150">
+        <label for="editGroup">Grupo muscular</label>
+        <select id="editGroup" required>
+            <option>Espalda</option><option>Brazo</option><option>Pecho</option><option>Abdomen</option>
+            <option>Hombro</option><option>Pierna</option><option>Cardio</option><option>Mixto</option>
+        </select>
+        <div id="editStrength" class="edit-fields">
+            <div><label for="editSets">Series</label><input id="editSets" type="number" min="1" step="1"></div>
+            <div><label for="editReps">Repeticiones</label><input id="editReps" type="number" min="1" step="1"></div>
+            <div><label for="editWeight">Peso (kg)</label><input id="editWeight" type="number" min="0" step="any"></div>
+        </div>
+        <div id="editCardio" class="edit-fields" hidden>
+            <div><label for="editMinutes">Duración (min)</label><input id="editMinutes" type="number" min="0" step="1"></div>
+            <div><label for="editDistance">Distancia (km)</label><input id="editDistance" type="number" min="0" step="any"></div>
+        </div>
+        <div id="editError" role="alert"></div>
+        <div class="edit-actions"><button type="button" id="editCancel">Cancelar</button><button type="submit" id="editSave">Guardar cambios</button></div>
+    </form>
+</div>
+
 <script>
+
+const editEventController = new AbortController();
+const editOverlay = document.getElementById("editOverlay");
+const editForm = document.getElementById("editExerciseForm");
+const editGroup = document.getElementById("editGroup");
+const editStrength = document.getElementById("editStrength");
+const editCardio = document.getElementById("editCardio");
+let editingExercise = false;
+function toggleEditMode() {
+    const cardio = editGroup.value.toLowerCase() === "cardio";
+    editStrength.hidden = cardio;
+    editCardio.hidden = !cardio;
+    editStrength.style.display = cardio ? "none" : "grid";
+    editCardio.style.display = cardio ? "grid" : "none";
+}
+editGroup.addEventListener("change", toggleEditMode);
+function openExerciseEditor(exercise) {
+    if (!exercise?.id) return;
+    document.getElementById("editId").value = exercise.id;
+    document.getElementById("editName").value = exercise.name || "";
+    const group = String(exercise.muscleGroup || "").trim() || "Espalda";
+    if (![...editGroup.options].some(o => o.value === group)) editGroup.add(new Option(group,group));
+    editGroup.value = group;
+    document.getElementById("editSets").value = exercise.sets || 0;
+    document.getElementById("editReps").value = exercise.reps || 0;
+    document.getElementById("editWeight").value = exercise.weightKg || 0;
+    document.getElementById("editMinutes").value = exercise.durationMinutes || 0;
+    document.getElementById("editDistance").value = exercise.distanceKm || 0;
+    document.getElementById("editError").textContent = "";
+    toggleEditMode();
+    editingExercise = true;
+    editOverlay.hidden = false;
+    document.getElementById("editName").focus();
+}
+function closeExerciseEditor() { editingExercise = false; editOverlay.hidden = true; }
+document.getElementById("editCancel").addEventListener("click", closeExerciseEditor);
+editOverlay.addEventListener("click", event => { if (event.target === editOverlay) closeExerciseEditor(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && editingExercise) closeExerciseEditor(); });
+editForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const id = document.getElementById("editId").value;
+    const cardio = editGroup.value.toLowerCase() === "cardio";
+    const body = {name: document.getElementById("editName").value.trim(), muscleGroup: editGroup.value};
+    if (cardio) {
+        body.durationMinutes = Number(document.getElementById("editMinutes").value);
+        body.distanceKm = Number(document.getElementById("editDistance").value);
+    } else {
+        body.sets = Number(document.getElementById("editSets").value);
+        body.reps = Number(document.getElementById("editReps").value);
+        body.weightKg = Number(document.getElementById("editWeight").value);
+    }
+    const save = document.getElementById("editSave");
+    save.disabled = true;
+    try {
+        const res = await fetch(`/api/exercises/${encodeURIComponent(id)}`, {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+        const result = await res.json();
+        if (!res.ok || !result.ok) throw new Error(result.message || "Error al guardar");
+        closeExerciseEditor();
+        window.location.reload();
+    } catch(error) { document.getElementById("editError").textContent = error.message || "Error de conexión."; }
+    finally { save.disabled = false; }
+});
+
 async function cargarEntrenamientos() {
     const AUTO_REFRESH_MS = 10000;
 
@@ -1440,6 +1542,13 @@ async function cargarEntrenamientos() {
         }
 
         const agrupadasGlobal = agruparSesionesPorFechaYActividad(sessions);
+        const exerciseById = new Map(sessions.flatMap(s => (s.exercises || []).map(e => [e.id, e])));
+        document.querySelectorAll(".edit-exercise-btn").forEach(b => b.remove());
+        document.addEventListener("click", event => {
+            const button = event.target.closest(".edit-exercise-btn");
+            if (!button) return;
+            openExerciseEditor(exerciseById.get(button.dataset.exerciseId));
+        }, {signal: editEventController.signal});
 
         const grupos = [...new Set(
             sessions.map(session => session.activity).filter(Boolean)
@@ -2513,6 +2622,7 @@ async function cargarEntrenamientos() {
                             <div class="exercise">
                                 <strong>${exercise.name}</strong>
                                 <span>${formatearMetricasHistorial(exercise)}</span>
+                                <button type="button" class="edit-exercise-btn" data-exercise-id="${exercise.id}">Editar</button>
                             </div>
                         `)
                         .join("");
@@ -2631,6 +2741,7 @@ async function cargarEntrenamientos() {
                                     <div class="exercise">
                                         <strong>${exercise.name}</strong>
                                         <span>${formatearMetricasHistorial(exercise)}</span>
+                                <button type="button" class="edit-exercise-btn" data-exercise-id="${exercise.id}">Editar</button>
                                     </div>
                                 `)
                                 .join("")}
@@ -2668,261 +2779,4 @@ async function cargarEntrenamientos() {
                 const empty =
                     document.createElement("div");
 
-                empty.className = "calendar-day empty";
-                calendarGrid.appendChild(empty);
-            }
-
-            for (let day = 1; day <= totalDays; day++) {
-                const fecha = new Date(year, month, day);
-                const key = keyFecha(fecha);
-                const delDia = sesionesPorDia.get(key) || [];
-
-                const button =
-                    document.createElement("button");
-
-                button.type = "button";
-                button.className = "calendar-day";
-
-                if (delDia.length) {
-                    button.classList.add("has-workout");
-                }
-
-                button.innerHTML = `
-                    <span class="day-number">
-                        ${day}
-                    </span>
-
-                    ${delDia.length
-                        ? `
-                            <span class="workout-dot"></span>
-                            <span class="workout-count">
-                                ${delDia.length}
-                                entrenamiento${delDia.length === 1 ? "" : "s"}
-                            </span>
-                        `
-                        : ""
-                    }
-                `;
-
-                button.addEventListener("click", () => {
-                    document
-                        .querySelectorAll(".calendar-day.selected")
-                        .forEach(element =>
-                            element.classList.remove("selected")
-                        );
-
-                    button.classList.add("selected");
-                    mostrarDetalleDia(key);
-                });
-
-                calendarGrid.appendChild(button);
-            }
-        }
-
-
-        monthFilter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_month",
-                monthFilter.value
-            );
-
-            renderMonthlyStatistics();
-        });
-
-        monthlyMetric.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_monthly_metric",
-                monthlyMetric.value
-            );
-
-            renderMonthlyStatistics();
-        });
-
-        filter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_filter",
-                filter.value
-            );
-
-            renderHistory(filter.value);
-        });
-
-        exerciseFilter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_exercise",
-                exerciseFilter.value
-            );
-
-            configurarMetricasProgreso();
-            mostrarProgreso(exerciseFilter.value);
-        });
-
-        metricFilter.addEventListener("change", () => {
-            sessionStorage.setItem(
-                "workout_metric",
-                metricFilter.value
-            );
-
-            if (exerciseFilter.value) {
-                mostrarProgreso(exerciseFilter.value);
-            }
-        });
-
-        prevMonth.addEventListener("click", () => {
-            calendarioActual =
-                new Date(
-                    calendarioActual.getFullYear(),
-                    calendarioActual.getMonth() - 1,
-                    1
-                );
-
-            guardarMesCalendario();
-            renderCalendario();
-        });
-
-        nextMonth.addEventListener("click", () => {
-            calendarioActual =
-                new Date(
-                    calendarioActual.getFullYear(),
-                    calendarioActual.getMonth() + 1,
-                    1
-                );
-
-            guardarMesCalendario();
-            renderCalendario();
-        });
-
-        buildMonthOptions();
-
-        const savedMonthlyMetric =
-            sessionStorage.getItem("workout_monthly_metric");
-
-        if (
-            savedMonthlyMetric &&
-            [...monthlyMetric.options].some(
-                option => option.value === savedMonthlyMetric
-            )
-        ) {
-            monthlyMetric.value = savedMonthlyMetric;
-        }
-
-        renderOverview();
-        renderCardioOverview();
-        renderActivityWeek();
-        renderMonthlyStatistics();
-        renderHistory(filter.value);
-
-        if (exerciseFilter.value) {
-            mostrarProgreso(exerciseFilter.value);
-        }
-
-        renderCalendario();
-
-        const estadoInicial = JSON.stringify(sessions);
-
-        setInterval(async () => {
-            try {
-                const refreshResponse =
-                    await fetch("/api/sessions", {
-                        cache: "no-store"
-                    });
-
-                if (!refreshResponse.ok) {
-                    return;
-                }
-
-                const sesionesActualizadas =
-                    await refreshResponse.json();
-
-                const estadoActual =
-                    JSON.stringify(sesionesActualizadas);
-
-                if (estadoActual !== estadoInicial) {
-                    sessionStorage.setItem(
-                        "workout_filter",
-                        filter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_exercise",
-                        exerciseFilter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_metric",
-                        metricFilter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_month",
-                        monthFilter.value
-                    );
-
-                    sessionStorage.setItem(
-                        "workout_monthly_metric",
-                        monthlyMetric.value
-                    );
-
-                    guardarMesCalendario();
-
-                    window.location.reload();
-                }
-            } catch (refreshError) {
-                console.warn(
-                    "No se pudo comprobar si hay nuevos entrenamientos.",
-                    refreshError
-                );
-            }
-        }, AUTO_REFRESH_MS);
-
-    } catch(error) {
-        status.textContent =
-            "No se pudieron cargar los entrenamientos.";
-
-        console.error(error);
-    }
-}
-
-function activarNavegacionPorScroll() {
-    const links = [...document.querySelectorAll(".nav a")];
-
-    const secciones = links
-        .map(link => {
-            const id = link.getAttribute("href");
-            return {
-                link,
-                section: document.querySelector(id)
-            };
-        })
-        .filter(item => item.section);
-
-    function actualizar() {
-        const referencia = window.scrollY + window.innerHeight * 0.28;
-
-        let activa = secciones[0];
-
-        secciones.forEach(item => {
-            if (item.section.offsetTop <= referencia) {
-                activa = item;
-            }
-        });
-
-        links.forEach(link => link.classList.remove("active"));
-
-        if (activa) {
-            activa.link.classList.add("active");
-        }
-    }
-
-    window.addEventListener("scroll", actualizar, { passive: true });
-    window.addEventListener("resize", actualizar);
-    actualizar();
-}
-
-activarNavegacionPorScroll();
-
-cargarEntrenamientos();
-</script>
-
-</body>
-</html>
+                emp
