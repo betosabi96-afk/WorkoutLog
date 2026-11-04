@@ -2779,4 +2779,143 @@ async function cargarEntrenamientos() {
                 const empty =
                     document.createElement("div");
 
-                emp
+                empty.className = "calendar-day empty";
+                calendarGrid.appendChild(empty);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const fecha = new Date(year, month, day);
+                const key = keyFecha(fecha);
+                const delDia = sesionesPorDia.get(key) || [];
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "calendar-day";
+
+                if (delDia.length) button.classList.add("has-workout");
+
+                button.innerHTML = `
+                    <span class="day-number">${day}</span>
+                    ${delDia.length ? `
+                        <span class="workout-dot"></span>
+                        <span class="workout-count">
+                            ${delDia.length} entrenamiento${delDia.length === 1 ? "" : "s"}
+                        </span>` : ""}
+                `;
+
+                button.addEventListener("click", () => {
+                    document.querySelectorAll(".calendar-day.selected").forEach(element =>
+                        element.classList.remove("selected")
+                    );
+                    button.classList.add("selected");
+                    mostrarDetalleDia(key);
+                });
+                calendarGrid.appendChild(button);
+            }
+        }
+
+        monthFilter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_month", monthFilter.value);
+            renderMonthlyStatistics();
+        });
+
+        monthlyMetric.addEventListener("change", () => {
+            sessionStorage.setItem("workout_monthly_metric", monthlyMetric.value);
+            renderMonthlyStatistics();
+        });
+
+        filter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_filter", filter.value);
+            renderHistory(filter.value);
+        });
+
+        exerciseFilter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_exercise", exerciseFilter.value);
+            configurarMetricasProgreso();
+            mostrarProgreso(exerciseFilter.value);
+        });
+
+        metricFilter.addEventListener("change", () => {
+            sessionStorage.setItem("workout_metric", metricFilter.value);
+            if (exerciseFilter.value) mostrarProgreso(exerciseFilter.value);
+        });
+
+        prevMonth.addEventListener("click", () => {
+            calendarioActual = new Date(calendarioActual.getFullYear(), calendarioActual.getMonth() - 1, 1);
+            guardarMesCalendario();
+            renderCalendario();
+        });
+
+        nextMonth.addEventListener("click", () => {
+            calendarioActual = new Date(calendarioActual.getFullYear(), calendarioActual.getMonth() + 1, 1);
+            guardarMesCalendario();
+            renderCalendario();
+        });
+
+        buildMonthOptions();
+        const savedMonthlyMetric = sessionStorage.getItem("workout_monthly_metric");
+        if (savedMonthlyMetric && [...monthlyMetric.options].some(option => option.value === savedMonthlyMetric)) {
+            monthlyMetric.value = savedMonthlyMetric;
+        }
+
+        renderOverview();
+        renderCardioOverview();
+        renderActivityWeek();
+        renderMonthlyStatistics();
+        renderHistory(filter.value);
+        if (exerciseFilter.value) mostrarProgreso(exerciseFilter.value);
+        else mostrarProgreso("");
+        renderCalendario();
+
+        const estadoInicial = JSON.stringify(sessions);
+        setInterval(async () => {
+            try {
+                const refreshResponse = await fetch("/api/sessions", { cache: "no-store" });
+                if (!refreshResponse.ok) return;
+                const sesionesActualizadas = await refreshResponse.json();
+                const estadoActual = JSON.stringify(sesionesActualizadas);
+                if (estadoActual !== estadoInicial) {
+                    sessionStorage.setItem("workout_filter", filter.value);
+                    sessionStorage.setItem("workout_exercise", exerciseFilter.value);
+                    sessionStorage.setItem("workout_metric", metricFilter.value);
+                    sessionStorage.setItem("workout_month", monthFilter.value);
+                    sessionStorage.setItem("workout_monthly_metric", monthlyMetric.value);
+                    guardarMesCalendario();
+                    window.location.reload();
+                }
+            } catch (refreshError) {
+                console.warn("No se pudo comprobar si hay nuevos entrenamientos.", refreshError);
+            }
+        }, AUTO_REFRESH_MS);
+
+    } catch (error) {
+        status.textContent = "No se pudieron cargar los entrenamientos.";
+        console.error(error);
+    }
+}
+
+function activarNavegacionPorScroll() {
+    const links = [...document.querySelectorAll(".nav a")];
+    const secciones = links.map(link => ({
+        link,
+        section: document.querySelector(link.getAttribute("href"))
+    })).filter(item => item.section);
+    function actualizar() {
+        const referencia = window.scrollY + window.innerHeight * 0.28;
+        let activa = secciones[0];
+        secciones.forEach(item => {
+            if (item.section.offsetTop <= referencia) activa = item;
+        });
+        links.forEach(link => link.classList.remove("active"));
+        if (activa) activa.link.classList.add("active");
+    }
+    window.addEventListener("scroll", actualizar, { passive: true });
+    window.addEventListener("resize", actualizar);
+    actualizar();
+}
+
+activarNavegacionPorScroll();
+cargarEntrenamientos();
+</script>
+</body>
+</html>
