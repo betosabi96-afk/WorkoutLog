@@ -1116,9 +1116,8 @@
 
                     </div>
                 </div>
-            </section>
 
-            <section class="card section-card cardio-overview" id="cardioOverview" aria-labelledby="cardioOverviewTitle">
+            <section class="card section-card cardio-overview" id="cardioOverview" hidden aria-labelledby="cardioOverviewTitle">
                         <div class="section-head">
                         <div>
                         <h2 id="cardioOverviewTitle">Resumen de Cardio</h2>
@@ -1149,7 +1148,7 @@
                         </div>
                         <p class="cardio-hint">El ritmo se calcula automáticamente: minutos totales ÷ kilómetros totales. Las mediciones faltantes no se interpretan como cero.</p>
             </section>
-
+            </section>
 
             <section id="statistics" class="panel">
                 <div class="section-head">
@@ -2292,9 +2291,9 @@ async function cargarEntrenamientos() {
         function mostrarProgreso(claveEjercicio) {
             const opcion = catalogoEjercicios.get(claveEjercicio);
             const cardioOverview = document.getElementById("cardioOverview");
-            
-             // Resumen global visible aunque no se haya seleccionado un ejercicio.
-             cardioOverview.hidden = false;
+            // Mostrar el resumen únicamente si el ejercicio seleccionado es Cardio.
+            // El atributo hidden también oculta el resumen antes de elegir un ejercicio.
+            cardioOverview.hidden = catalogoEjercicios.get(claveEjercicio)?.grupo.toLowerCase() !== "cardio";
             if (!claveEjercicio || !catalogoEjercicios.has(claveEjercicio)) {
                 progressResult.innerHTML = "";
                 summaryCurrent.textContent = "—";
@@ -2910,12 +2909,4 @@ function activarNavegacionPorScroll() {
         if (activa) activa.link.classList.add("active");
     }
     window.addEventListener("scroll", actualizar, { passive: true });
-    window.addEventListener("resize", actualizar);
-    actualizar();
-}
-
-activarNavegacionPorScroll();
-cargarEntrenamientos();
-</script>
-</body>
-</html>
+  
