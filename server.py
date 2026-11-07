@@ -7,9 +7,15 @@ import json
 import uuid
 import os
 import math
+import secrets
+import hashlib
+import hmac
+import re
 
 import psycopg
 from psycopg.rows import dict_row
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, VerificationError
 
 
 # ==========================================
@@ -954,11 +960,4 @@ if __name__ == "__main__":
     print("")
     print("==============================")
     print(" WorkoutLog funcionando")
-    print("==============================")
-    print(
-        f"http://localhost:{PORT}"
-    )
-    print("==============================")
-    print("")
-
-    server.serve_forever()
+    print("================
