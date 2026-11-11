@@ -1,3 +1,4 @@
 data/*.sqlite3
 __pycache__/
 *.pyc
+public/index_respaldo.html

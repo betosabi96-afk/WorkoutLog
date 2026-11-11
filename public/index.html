@@ -958,11 +958,87 @@
         .edit-actions button { cursor:pointer; border:0; border-radius:9px; padding:11px 15px; font:inherit; font-weight:700; color:white; background:#52647A; }
         .edit-actions button[type=submit] { background:#006ECF; }
         #editError { color:#ffb1b1; min-height:1.2em; margin-top:10px; }
+
+        /* Acceso privado — desarrollo multiusuario */
+        [hidden] { display: none !important; }
+        .auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 20% 12%, rgba(0,212,198,.13), transparent 42%), #2D3F54; }
+        .auth-card { width: min(450px, 100%); padding: 32px; border-radius: 22px; background: #34495F; border: 1px solid rgba(255,255,255,.15); box-shadow: 0 20px 60px rgba(0,0,0,.24); }
+        .auth-brand { display:flex; align-items:center; gap:12px; margin-bottom:22px; font-size:21px; font-weight:800; }
+        .auth-card h1 { font-size:28px; letter-spacing:-.03em; margin:0 0 8px; }
+        .auth-subtitle { color:var(--text-label); margin:0 0 22px; line-height:1.5; }
+        .auth-switch { display:grid; grid-template-columns:1fr 1fr; gap:7px; background:#26384A; padding:5px; border-radius:12px; margin-bottom:22px; }
+        .auth-switch button { border:0; border-radius:9px; background:transparent; color:var(--text-label); padding:11px; font-weight:700; cursor:pointer; }
+        .auth-switch button[aria-selected="true"] { background:#006ECF; color:white; }
+        .auth-field { display:block; margin-bottom:16px; color:var(--text-label); font-size:13px; font-weight:700; }
+        .auth-field input { display:block; margin-top:7px; width:100%; border-radius:11px; border:1px solid #71879c; background:#26384A; color:#fff; padding:13px; font:inherit; }
+        .auth-field input:focus { outline:2px solid #00D4C6; outline-offset:1px; }
+        .auth-submit { width:100%; border:0; border-radius:11px; background:#006ECF; color:#fff; padding:13px; cursor:pointer; font:inherit; font-weight:800; }
+        .auth-submit:disabled { opacity:.6; cursor:wait; }
+        .auth-feedback { min-height:2em; margin-top:15px; color:#ffb1b1; font-size:13px; line-height:1.5; }
+        .auth-feedback.success { color:#73CC80; }
+        .auth-note { color:var(--muted); font-size:12px; margin:15px 0 0; line-height:1.5; }
+        .account-bar { margin-top:32px; padding:15px 10px 0; border-top:1px solid var(--line); }
+        .account-caption { font-size:11px; color:var(--text-label); margin-bottom:10px; }
+        .account-logout { width:100%; border:1px solid rgba(255,255,255,.25); border-radius:10px; padding:11px; color:#fff; background:rgba(255,255,255,.06); font:inherit; cursor:pointer; font-weight:700; }
+        .account-logout:hover { background:rgba(255,255,255,.15); }
+
+        /* Gestión de Atajos: credenciales limitadas a la cuenta autenticada */
+        .device-intro { color:var(--text-body); line-height:1.6; max-width:830px; margin:0 0 20px; }
+        .device-layout { display:grid; grid-template-columns:minmax(260px,.9fr) minmax(0,1.4fr); gap:18px; align-items:start; }
+        .device-card { padding:20px; border:1px solid var(--line); border-radius:15px; background:#26384A; }
+        .device-card h3 { margin:0 0 14px; font-size:17px; color:var(--title-card); }
+        .device-label { display:block; font-weight:700; font-size:13px; margin-bottom:8px; color:var(--text-label); }
+        .device-input { width:100%; border-radius:10px; background:#34495F; border:1px solid #71879c; color:white; font:inherit; padding:12px; }
+        .device-input:focus { outline:2px solid var(--cyan); outline-offset:2px; }
+        .device-button { border:0; border-radius:10px; background:var(--blue-600); color:white; font:inherit; font-weight:800; padding:12px 16px; cursor:pointer; }
+        .device-button:hover { background:#1680e0; }
+        .device-button:disabled { opacity:.55; cursor:wait; }
+        .device-button.secondary { background:#52647A; }
+        .device-button.danger { background:#7d3642; border:1px solid #bd727a; }
+        .device-button.danger:hover { background:#963e4b; }
+        .device-action-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+        .device-feedback { min-height:1.4em; margin-top:12px; color:#ffb1b1; font-size:13px; }
+        .device-feedback.good { color:var(--green); }
+        .device-hint { font-size:13px; color:var(--text-label); line-height:1.6; }
+        .device-token-panel { margin-top:16px; padding:16px; border-radius:12px; border:1px solid rgba(0,212,198,.4); background:rgba(0,212,198,.07); }
+        .device-token-panel[hidden] { display:none !important; }
+        .device-token-panel h4 { color:var(--green); margin:0 0 8px; }
+        .device-token-panel .device-input { font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+        .device-list { display:grid; gap:12px; }
+        .device-item { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:14px; border:1px solid var(--line); background:#34495F; border-radius:12px; }
+        .device-item strong { display:block; color:#fff; overflow-wrap:anywhere; }
+        .device-meta { color:var(--text-label); font-size:12px; margin-top:5px; line-height:1.5; }
+        .device-status { display:inline-block; padding:3px 8px; border:1px solid var(--line); border-radius:999px; margin-top:7px; font-size:11px; color:var(--green); }
+        .device-status.inactive { color:#ffb1b1; }
+        @media (max-width: 960px) { .device-layout { grid-template-columns:1fr; } }
+        @media (max-width: 560px) { .device-item { align-items:flex-start; flex-direction:column; } .device-item .device-button { width:100%; } }
     </style>
 </head>
 
 <body>
-<div class="app-shell">
+<section id="authScreen" class="auth-screen" aria-label="Acceso a WorkoutLog" hidden>
+    <div class="auth-card">
+        <div class="auth-brand"><div class="brand-mark">W</div><span>WorkoutLog</span></div>
+        <h1 id="authTitle">Iniciar sesión</h1>
+        <p class="auth-subtitle" id="authSubtitle">Consulta tus entrenamientos, estadísticas y progreso en tu cuenta privada.</p>
+        <div class="auth-switch" role="tablist" aria-label="Acceso a tu cuenta">
+            <button type="button" id="loginTab" role="tab" aria-selected="true">Iniciar sesión</button>
+            <button type="button" id="registerTab" role="tab" aria-selected="false">Crear cuenta</button>
+        </div>
+        <form id="authForm">
+            <label class="auth-field" for="authEmail">Correo electrónico
+                <input id="authEmail" type="email" autocomplete="email" maxlength="254" required placeholder="correo@ejemplo.com">
+            </label>
+            <label class="auth-field" for="authPassword">Contraseña
+                <input id="authPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required placeholder="Mínimo 12 caracteres">
+            </label>
+            <button class="auth-submit" id="authSubmit" type="submit">Entrar a mi cuenta</button>
+            <div class="auth-feedback" id="authFeedback" role="status" aria-live="polite"></div>
+        </form>
+        <p class="auth-note">Prueba local de cuentas. No utilices contraseñas que ya uses en otros servicios.</p>
+    </div>
+</section>
+<div class="app-shell" id="workoutApp" hidden>
 
     <aside class="sidebar">
         <div class="brand">
@@ -978,7 +1054,12 @@
             <a href="#statistics"><span class="nav-icon">◫</span> Estadísticas</a>
             <a href="#calendar"><span class="nav-icon">□</span> Calendario</a>
             <a href="#history"><span class="nav-icon">≡</span> Historial</a>
+            <a href="#devices"><span class="nav-icon">▣</span> Mis dispositivos</a>
         </nav>
+        <div class="account-bar">
+            <div class="account-caption">Cuenta privada · WorkoutLog</div>
+            <button class="account-logout" type="button" id="logoutButton">Cerrar sesión</button>
+        </div>
 
     </aside>
 
@@ -1339,6 +1420,45 @@
                 <div id="sessions"></div>
             </section>
 
+            <section id="devices" class="panel" aria-labelledby="devicesHeading">
+                <div class="section-head"><div>
+                    <h2 id="devicesHeading">Mis dispositivos</h2>
+                    <p>Administra el acceso de los Atajos de iPhone a tu cuenta privada.</p>
+                </div></div>
+                <p class="device-intro">Genera una credencial exclusiva para tu iPhone. Esta credencial permite enviar entrenamientos a tu cuenta, pero no consultar tu historial. Si pierdes el dispositivo, puedes revocar el acceso desde aquí.</p>
+                <div class="device-layout">
+                    <div class="device-card">
+                        <h3>Vincular un iPhone</h3>
+                        <form id="createDeviceForm">
+                            <label class="device-label" for="deviceLabel">Nombre del dispositivo</label>
+                            <input class="device-input" id="deviceLabel" name="label" maxlength="60" required placeholder="Ej. iPhone personal" autocomplete="off">
+                            <div class="device-action-row"><button class="device-button" id="createDeviceButton" type="submit">Generar credencial</button></div>
+                        </form>
+                        <div id="createDeviceFeedback" class="device-feedback" role="status" aria-live="polite"></div>
+                        <div class="device-token-panel" id="deviceTokenPanel" hidden>
+                            <h4>Credencial creada: guárdala ahora</h4>
+                            <p class="device-hint">Se muestra una sola vez. Cópiala y guárdala en un lugar seguro; no la compartas ni la publiques. Después la añadiremos al Atajo del iPhone.</p>
+                            <label class="device-label" for="deviceTokenValue">Credencial del Atajo</label>
+                            <input class="device-input" id="deviceTokenValue" type="password" readonly spellcheck="false" autocomplete="off" aria-label="Credencial recién creada">
+                            <div class="device-action-row">
+                                <button class="device-button" type="button" id="copyDeviceToken">Copiar credencial</button>
+                                <button class="device-button secondary" type="button" id="toggleDeviceToken">Mostrar</button>
+                                <button class="device-button secondary" type="button" id="dismissDeviceToken">Ya la guardé</button>
+                            </div>
+                            <div id="copyDeviceFeedback" class="device-feedback" role="status" aria-live="polite"></div>
+                        </div>
+                    </div>
+                    <div class="device-card">
+                        <div class="section-head"><div><h3 style="margin:0;">Dispositivos vinculados</h3></div>
+                        <button class="device-button secondary" type="button" id="refreshDevices">Actualizar</button></div>
+                        <div class="device-list" id="deviceList" aria-live="polite"><p class="device-hint">Consultando dispositivos…</p></div>
+                        <p id="deviceListFeedback" class="device-feedback" role="status" aria-live="polite"></p>
+                    </div>
+                </div>
+                <p class="device-hint" style="margin-top:18px;">Disponible en el entorno local de desarrollo. Para utilizar el Atajo fuera de la red local hará falta publicar y asegurar el backend mediante HTTPS.</p>
+            </section>
+
+
         </div>
     </main>
 
@@ -1370,6 +1490,124 @@
 </div>
 
 <script>
+// La sesión se valida en el servidor. Nunca se confía en un userId enviado por el navegador.
+let activeAccountId = null;
+let loginMode = "login";
+const authScreen = document.getElementById("authScreen");
+const workoutApp = document.getElementById("workoutApp");
+const authFeedback = document.getElementById("authFeedback");
+const authForm = document.getElementById("authForm");
+const authSubmit = document.getElementById("authSubmit");
+function escapeWorkoutText(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+function getWorkoutSetting(key) {
+    return activeAccountId ? sessionStorage.getItem(`account_${activeAccountId}_${key}`) : null;
+}
+function setWorkoutSetting(key, value) {
+    if (activeAccountId) sessionStorage.setItem(`account_${activeAccountId}_${key}`, value);
+}
+function setAuthMode(mode) {
+    loginMode = mode;
+    const isLogin = mode === "login";
+    document.getElementById("loginTab").setAttribute("aria-selected", String(isLogin));
+    document.getElementById("registerTab").setAttribute("aria-selected", String(!isLogin));
+    document.getElementById("authTitle").textContent = isLogin ? "Iniciar sesión" : "Crear tu cuenta";
+    document.getElementById("authSubtitle").textContent = isLogin
+        ? "Consulta tus entrenamientos, estadísticas y progreso en tu cuenta privada."
+        : "Registra tu correo y una contraseña para comenzar.";
+    authSubmit.textContent = isLogin ? "Entrar a mi cuenta" : "Crear cuenta";
+    document.getElementById("authPassword").autocomplete = isLogin ? "current-password" : "new-password";
+    authFeedback.textContent = "";
+    authFeedback.classList.remove("success");
+}
+function showAuth(message = "") {
+    clearNewDeviceToken();
+    deviceListRequest++;
+    activeAccountId = null;
+    workoutApp.hidden = true;
+    authScreen.hidden = false;
+    if (message) { authFeedback.textContent = message; authFeedback.classList.remove("success"); }
+}
+function showApp(userId) {
+    clearNewDeviceToken();
+    // Los navegadores pueden restaurar <select> tras recargar. Forzamos los
+    // valores correspondientes a la cuenta autenticada, nunca a la anterior.
+    activeAccountId = String(userId);
+    const monthlyMetric = document.getElementById("monthlyMetric");
+    const monthlyOptions = Array.from(monthlyMetric.options, option => option.value);
+    const savedMonthlyMetric = getWorkoutSetting("workout_monthly_metric");
+    monthlyMetric.value = monthlyOptions.includes(savedMonthlyMetric)
+        ? savedMonthlyMetric : "volume";
+    document.getElementById("filter").value = "Todos";
+    document.getElementById("exerciseFilter").value = "";
+    document.getElementById("metricFilter").value = "weightKg";
+    document.getElementById("monthFilter").selectedIndex = -1;
+    authScreen.hidden = true;
+    workoutApp.hidden = false;
+}
+async function parseJsonSafely(response) {
+    try { return await response.json(); } catch { return {}; }
+}
+async function checkSession() {
+    try {
+        const response = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+        if (response.status === 401) { showAuth(); return; }
+        const data = await parseJsonSafely(response);
+        if (!response.ok || !data.ok || !data.userId) throw new Error("No se pudo verificar la sesión.");
+        showApp(data.userId);
+        cargarEntrenamientos();
+        loadDevices();
+    } catch (error) { showAuth("No pudimos comprobar tu sesión. Revisa que el servidor local esté activo."); }
+}
+document.getElementById("loginTab").addEventListener("click", () => setAuthMode("login"));
+document.getElementById("registerTab").addEventListener("click", () => setAuthMode("register"));
+authForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const email = document.getElementById("authEmail").value.trim().toLowerCase();
+    const passwordInput = document.getElementById("authPassword");
+    const password = passwordInput.value;
+    authSubmit.disabled = true;
+    authFeedback.textContent = "";
+    authFeedback.classList.remove("success");
+    try {
+        const response = await fetch(loginMode === "login" ? "/api/auth/login" : "/api/auth/register", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const result = await parseJsonSafely(response);
+        if (!response.ok || !result.ok) throw new Error(result.error || "No fue posible completar la operación.");
+        passwordInput.value = "";
+        if (loginMode === "register") {
+            setAuthMode("login");
+            authFeedback.textContent = "Cuenta creada. Ahora inicia sesión con tu correo y contraseña.";
+            authFeedback.classList.add("success");
+            document.getElementById("authEmail").value = email;
+        } else {
+            // La cookie HttpOnly la gestiona el navegador: nunca guardamos el token en JS.
+            const me = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+            const data = await parseJsonSafely(me);
+            if (!me.ok || !data.ok || !data.userId) throw new Error("La sesión no se pudo verificar.");
+            // Recargar evita mezclar datos y temporizadores de cuentas distintas.
+            window.location.reload();
+        }
+    } catch (error) { authFeedback.textContent = error.message || "Error de conexión."; }
+    finally { authSubmit.disabled = false; }
+});
+document.getElementById("logoutButton").addEventListener("click", async () => {
+    const button = document.getElementById("logoutButton");
+    button.disabled = true;
+    try {
+        const response = await fetch("/api/auth/logout", {
+            method: "POST", credentials: "same-origin", cache: "no-store",
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!response.ok) throw new Error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
+        clearNewDeviceToken();
+        window.location.reload();
+    } catch (error) { alert(error.message); button.disabled = false; }
+});
 
 const editEventController = new AbortController();
 const editOverlay = document.getElementById("editOverlay");
@@ -1494,6 +1732,7 @@ async function cargarEntrenamientos() {
     try {
         const response = await fetch("/api/sessions", { cache: "no-store" });
 
+        if (response.status === 401) { showAuth("Tu sesión expiró. Inicia sesión nuevamente."); return; }
         if (!response.ok) {
             throw new Error("Error del servidor");
         }
@@ -1560,7 +1799,7 @@ async function cargarEntrenamientos() {
             filter.appendChild(option);
         });
 
-        const filtroGuardado = sessionStorage.getItem("workout_filter");
+        const filtroGuardado = getWorkoutSetting("workout_filter");
 
         if (
             filtroGuardado &&
@@ -1603,7 +1842,7 @@ async function cargarEntrenamientos() {
                 exerciseFilter.appendChild(option);
             });
 
-        const ejercicioGuardado = sessionStorage.getItem("workout_exercise");
+        const ejercicioGuardado = getWorkoutSetting("workout_exercise");
         if (ejercicioGuardado) {
             if (catalogoEjercicios.has(ejercicioGuardado)) {
                 exerciseFilter.value = ejercicioGuardado;
@@ -1632,7 +1871,7 @@ async function cargarEntrenamientos() {
                 ? [["durationMinutes", "Duración"], ["distanceKm", "Distancia"], ["paceMinKm", "Ritmo (min/km)"]]
                 : [["weightKg", "Peso"], ["reps", "Repeticiones"], ["sets", "Series"]];
             const actual = metricFilter.value;
-            const guardada = sessionStorage.getItem("workout_metric");
+            const guardada = getWorkoutSetting("workout_metric");
             metricFilter.innerHTML = "";
             opciones.forEach(([valor, texto]) => {
                 const option = document.createElement("option");
@@ -1935,7 +2174,7 @@ async function cargarEntrenamientos() {
             });
 
             const saved =
-                sessionStorage.getItem("workout_month");
+                getWorkoutSetting("workout_month");
 
             if (
                 saved &&
@@ -2619,9 +2858,9 @@ async function cargarEntrenamientos() {
                     (session.exercises || [])
                         .map(exercise => `
                             <div class="exercise">
-                                <strong>${exercise.name}</strong>
+                                <strong>${escapeWorkoutText(exercise.name)}</strong>
                                 <span>${formatearMetricasHistorial(exercise)}</span>
-                                <button type="button" class="edit-exercise-btn" data-exercise-id="${exercise.id}">Editar</button>
+                                <button type="button" class="edit-exercise-btn" data-exercise-id="${escapeWorkoutText(exercise.id)}">Editar</button>
                             </div>
                         `)
                         .join("");
@@ -2629,11 +2868,11 @@ async function cargarEntrenamientos() {
                 card.innerHTML = `
                     <div class="session-head">
                         <div>
-                            <h3>${session.activity}</h3>
+                            <h3>${escapeWorkoutText(session.activity)}</h3>
                             <div class="meta">
                                 ${session.fechaObj.toLocaleDateString("es-MX")}
                                 ${session.intensity
-                                    ? ` · ${session.intensity}`
+                                    ? ` · ${escapeWorkoutText(session.intensity)}`
                                     : ""}
                             </div>
                         </div>
@@ -2679,7 +2918,7 @@ async function cargarEntrenamientos() {
             );
 
         const mesGuardado =
-            sessionStorage.getItem("workout_calendar_month");
+            getWorkoutSetting("workout_calendar_month");
 
         if (mesGuardado && /^\d{4}-\d{2}$/.test(mesGuardado)) {
             const [yearGuardado, monthGuardado] =
@@ -2697,7 +2936,7 @@ async function cargarEntrenamientos() {
                     calendarioActual.getMonth() + 1
                 ).padStart(2, "0");
 
-            sessionStorage.setItem(
+            setWorkoutSetting(
                 "workout_calendar_month",
                 `${y}-${m}`
             );
@@ -2727,7 +2966,7 @@ async function cargarEntrenamientos() {
                     <article class="session">
                         <div class="session-head">
                             <div>
-                                <h3>${session.activity}</h3>
+                                <h3>${escapeWorkoutText(session.activity)}</h3>
                                 <div class="meta">
                                     ${session.intensity || ""}
                                 </div>
@@ -2738,9 +2977,9 @@ async function cargarEntrenamientos() {
                             ${(session.exercises || [])
                                 .map(exercise => `
                                     <div class="exercise">
-                                        <strong>${exercise.name}</strong>
+                                        <strong>${escapeWorkoutText(exercise.name)}</strong>
                                         <span>${formatearMetricasHistorial(exercise)}</span>
-                                <button type="button" class="edit-exercise-btn" data-exercise-id="${exercise.id}">Editar</button>
+                                <button type="button" class="edit-exercise-btn" data-exercise-id="${escapeWorkoutText(exercise.id)}">Editar</button>
                                     </div>
                                 `)
                                 .join("")}
@@ -2814,28 +3053,28 @@ async function cargarEntrenamientos() {
         }
 
         monthFilter.addEventListener("change", () => {
-            sessionStorage.setItem("workout_month", monthFilter.value);
+            setWorkoutSetting("workout_month", monthFilter.value);
             renderMonthlyStatistics();
         });
 
         monthlyMetric.addEventListener("change", () => {
-            sessionStorage.setItem("workout_monthly_metric", monthlyMetric.value);
+            setWorkoutSetting("workout_monthly_metric", monthlyMetric.value);
             renderMonthlyStatistics();
         });
 
         filter.addEventListener("change", () => {
-            sessionStorage.setItem("workout_filter", filter.value);
+            setWorkoutSetting("workout_filter", filter.value);
             renderHistory(filter.value);
         });
 
         exerciseFilter.addEventListener("change", () => {
-            sessionStorage.setItem("workout_exercise", exerciseFilter.value);
+            setWorkoutSetting("workout_exercise", exerciseFilter.value);
             configurarMetricasProgreso();
             mostrarProgreso(exerciseFilter.value);
         });
 
         metricFilter.addEventListener("change", () => {
-            sessionStorage.setItem("workout_metric", metricFilter.value);
+            setWorkoutSetting("workout_metric", metricFilter.value);
             if (exerciseFilter.value) mostrarProgreso(exerciseFilter.value);
         });
 
@@ -2852,10 +3091,9 @@ async function cargarEntrenamientos() {
         });
 
         buildMonthOptions();
-        const savedMonthlyMetric = sessionStorage.getItem("workout_monthly_metric");
-        if (savedMonthlyMetric && [...monthlyMetric.options].some(option => option.value === savedMonthlyMetric)) {
-            monthlyMetric.value = savedMonthlyMetric;
-        }
+        const savedMonthlyMetric = getWorkoutSetting("workout_monthly_metric");
+        monthlyMetric.value = savedMonthlyMetric && [...monthlyMetric.options].some(option => option.value === savedMonthlyMetric)
+            ? savedMonthlyMetric : "volume";
 
         renderOverview();
         renderCardioOverview();
@@ -2870,15 +3108,16 @@ async function cargarEntrenamientos() {
         setInterval(async () => {
             try {
                 const refreshResponse = await fetch("/api/sessions", { cache: "no-store" });
+                if (refreshResponse.status === 401) { window.location.reload(); return; }
                 if (!refreshResponse.ok) return;
                 const sesionesActualizadas = await refreshResponse.json();
                 const estadoActual = JSON.stringify(sesionesActualizadas);
                 if (estadoActual !== estadoInicial) {
-                    sessionStorage.setItem("workout_filter", filter.value);
-                    sessionStorage.setItem("workout_exercise", exerciseFilter.value);
-                    sessionStorage.setItem("workout_metric", metricFilter.value);
-                    sessionStorage.setItem("workout_month", monthFilter.value);
-                    sessionStorage.setItem("workout_monthly_metric", monthlyMetric.value);
+                    setWorkoutSetting("workout_filter", filter.value);
+                    setWorkoutSetting("workout_exercise", exerciseFilter.value);
+                    setWorkoutSetting("workout_metric", metricFilter.value);
+                    setWorkoutSetting("workout_month", monthFilter.value);
+                    setWorkoutSetting("workout_monthly_metric", monthlyMetric.value);
                     guardarMesCalendario();
                     window.location.reload();
                 }
@@ -2892,6 +3131,153 @@ async function cargarEntrenamientos() {
         console.error(error);
     }
 }
+
+
+// Mis dispositivos: la credencial se mantiene solo en memoria y se limpia al ocultarla.
+const deviceList = document.getElementById("deviceList");
+const deviceTokenPanel = document.getElementById("deviceTokenPanel");
+const deviceTokenValue = document.getElementById("deviceTokenValue");
+let newlyCreatedDeviceToken = null;
+let deviceListRequest = 0;
+
+function setDeviceFeedback(id, message, good = false) {
+    const el = document.getElementById(id);
+    el.textContent = message;
+    el.classList.toggle("good", good);
+}
+function clearNewDeviceToken() {
+    newlyCreatedDeviceToken = null;
+    deviceTokenValue.value = "";
+    deviceTokenValue.type = "password";
+    document.getElementById("toggleDeviceToken").textContent = "Mostrar";
+    deviceTokenPanel.hidden = true;
+    setDeviceFeedback("copyDeviceFeedback", "");
+}
+function deviceDate(value) {
+    if (!value) return "Sin registro";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "Fecha no disponible" : date.toLocaleString("es-MX", { dateStyle:"medium", timeStyle:"short" });
+}
+async function loadDevices() {
+    if (!activeAccountId) return;
+    const accountAtStart = activeAccountId;
+    const currentRequest = ++deviceListRequest;
+    document.getElementById("refreshDevices").disabled = true;
+    setDeviceFeedback("deviceListFeedback", "");
+    try {
+        const response = await fetch("/api/shortcut-tokens", {credentials:"same-origin", cache:"no-store"});
+        const data = await parseJsonSafely(response);
+        if (response.status === 401) { showAuth("Tu sesión expiró. Inicia sesión nuevamente."); return; }
+        if (!response.ok || !data.ok || !Array.isArray(data.tokens)) throw new Error(data.error || "No se pudieron consultar los dispositivos.");
+        if (currentRequest !== deviceListRequest || activeAccountId !== accountAtStart) return;
+        deviceList.replaceChildren();
+        if (!data.tokens.length) {
+            const empty = document.createElement("p");
+            empty.className = "device-hint";
+            empty.textContent = "Todavía no has vinculado ningún dispositivo.";
+            deviceList.append(empty);
+            return;
+        }
+        data.tokens.forEach(token => {
+            const item = document.createElement("article"); item.className = "device-item";
+            const info = document.createElement("div");
+            const name = document.createElement("strong"); name.textContent = token.label || "Dispositivo sin nombre";
+            const meta = document.createElement("div"); meta.className = "device-meta";
+            meta.textContent = `Creado: ${deviceDate(token.created_at)} · Vence: ${deviceDate(token.expires_at)} · Último uso: ${token.last_used_at ? deviceDate(token.last_used_at) : "Nunca"}`;
+            const status = document.createElement("span"); status.className = "device-status";
+            const expired = token.expires_at && new Date(token.expires_at).getTime() <= Date.now();
+            const inactive = Boolean(token.revoked_at) || expired;
+            status.classList.toggle("inactive", inactive);
+            status.textContent = token.revoked_at ? "Revocado" : expired ? "Vencido" : "Activo";
+            info.append(name,meta,status);
+            item.append(info);
+            if (!inactive) {
+                const revoke = document.createElement("button");
+                revoke.type = "button"; revoke.className = "device-button danger"; revoke.textContent = "Revocar acceso";
+                revoke.addEventListener("click", () => revokeDevice(token.id, token.label || "este dispositivo", revoke));
+                item.append(revoke);
+            }
+            deviceList.append(item);
+        });
+    } catch (error) {
+        if (currentRequest === deviceListRequest) setDeviceFeedback("deviceListFeedback", error.message || "Error de conexión.");
+    } finally {
+        if (currentRequest === deviceListRequest) document.getElementById("refreshDevices").disabled = false;
+    }
+}
+async function revokeDevice(id, label, button) {
+    if (!id || !activeAccountId) return;
+    if (!window.confirm(`¿Revocar el acceso de «${label}»? El Atajo dejará de registrar entrenamientos.`)) return;
+    const accountAtStart = activeAccountId;
+    button.disabled = true;
+    try {
+        const response = await fetch("/api/shortcut-tokens/revoke", {
+            method:"POST", credentials:"same-origin", cache:"no-store",
+            headers:{"Content-Type":"application/json"}, body:JSON.stringify({id})
+        });
+        const data = await parseJsonSafely(response);
+        if (response.status === 401) { showAuth("Tu sesión expiró. Inicia sesión nuevamente."); return; }
+        if (!response.ok || !data.ok) throw new Error(data.error || data.message || "No se pudo revocar el dispositivo.");
+        if (accountAtStart !== activeAccountId) return;
+        setDeviceFeedback("deviceListFeedback", "Acceso revocado correctamente.", true);
+        await loadDevices();
+        setDeviceFeedback("deviceListFeedback", "Acceso revocado correctamente.", true);
+    } catch(error) {
+        setDeviceFeedback("deviceListFeedback", error.message || "Error de conexión.");
+        button.disabled = false;
+    }
+}
+document.getElementById("createDeviceForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!activeAccountId) return;
+    const label = document.getElementById("deviceLabel").value.trim();
+    if (!label || label.length > 60) { setDeviceFeedback("createDeviceFeedback", "Escribe un nombre de hasta 60 caracteres."); return; }
+    if (newlyCreatedDeviceToken && !window.confirm("Aún hay una credencial sin guardar. Si continúas se ocultará y no podrás recuperarla. ¿Continuar?")) return;
+    clearNewDeviceToken();
+    const accountAtStart = activeAccountId;
+    const button = document.getElementById("createDeviceButton"); button.disabled = true;
+    setDeviceFeedback("createDeviceFeedback", "");
+    try {
+        const response = await fetch("/api/shortcut-tokens", {
+            method:"POST", credentials:"same-origin", cache:"no-store",
+            headers:{"Content-Type":"application/json"}, body:JSON.stringify({label})
+        });
+        const data = await parseJsonSafely(response);
+        if (response.status === 401) { showAuth("Tu sesión expiró. Inicia sesión nuevamente."); return; }
+        if (!response.ok || !data.ok || typeof data.token !== "string" || !data.token) throw new Error(data.error || data.message || "No se pudo crear la credencial.");
+        if (accountAtStart !== activeAccountId) return;
+        newlyCreatedDeviceToken = data.token;
+        deviceTokenValue.value = newlyCreatedDeviceToken;
+        deviceTokenPanel.hidden = false;
+        document.getElementById("deviceLabel").value = "";
+        setDeviceFeedback("createDeviceFeedback", "Credencial generada. Cópiala antes de salir de esta pantalla.", true);
+        await loadDevices();
+    } catch (error) {
+        setDeviceFeedback("createDeviceFeedback", error.message || "Error de conexión.");
+    } finally { button.disabled = false; }
+});
+document.getElementById("copyDeviceToken").addEventListener("click", async () => {
+    if (!newlyCreatedDeviceToken) return;
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(newlyCreatedDeviceToken);
+        } else {
+            deviceTokenValue.focus(); deviceTokenValue.select();
+            if (!document.execCommand("copy")) throw new Error("Copia manualmente el contenido del campo.");
+            deviceTokenValue.setSelectionRange(0,0);
+        }
+        setDeviceFeedback("copyDeviceFeedback", "Credencial copiada. Guárdala en un lugar seguro.", true);
+    } catch(error) { setDeviceFeedback("copyDeviceFeedback", error.message || "No se pudo copiar. Selecciona el campo y copia manualmente."); }
+});
+document.getElementById("toggleDeviceToken").addEventListener("click", () => {
+    const showing = deviceTokenValue.type === "password";
+    deviceTokenValue.type = showing ? "text" : "password";
+    document.getElementById("toggleDeviceToken").textContent = showing ? "Ocultar" : "Mostrar";
+});
+document.getElementById("dismissDeviceToken").addEventListener("click", clearNewDeviceToken);
+document.getElementById("refreshDevices").addEventListener("click", loadDevices);
+document.querySelector('.nav a[href="#devices"]').addEventListener("click", loadDevices);
+document.querySelectorAll('.nav a:not([href="#devices"])').forEach(link => link.addEventListener("click", clearNewDeviceToken));
 
 function activarNavegacionPorScroll() {
     const links = [...document.querySelectorAll(".nav a")];
@@ -2913,7 +3299,7 @@ function activarNavegacionPorScroll() {
 }
 
 activarNavegacionPorScroll();
-cargarEntrenamientos();
+checkSession();
 </script>
 </body>
 </html>
